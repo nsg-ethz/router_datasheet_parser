@@ -47,7 +47,7 @@ system_prompt = lambda name: "\n".join([PERSONA, HIGH_LEVEL_TASK, LOW_LEVEL_TASK
 if __name__ == "__main__":
     client = OpenAI()
     # Import csv file
-    df = pd.read_csv("../Downloads/romain_psu_data/network_devices_db.csv", index_col=0)
+    df = pd.read_csv("network_devices_db.csv", index_col=0)
     # Create a data structure to hold the information
     data = {}
     for name, row in tqdm(df.iterrows(), total=df.shape[0]):
