@@ -1,0 +1,2 @@
+Name,Vendor,Datasheet URL,Datasheet_file,Typical power (W),Typical power (desc),Max power (W),Max power (desc),Max Throughput (Tbps),Release,End-of-Sale,End-of-Support,Number of PSUs,PSU power (W),PSU rating
+8201-32FH,Cisco,https://www.cisco.com/c/en/us/products/collateral/routers/8000-series-routers/datasheet-c78-742571.html,Network%20devices%20%5BDB%5D%2085432de971104cb982867d57e4791c49/datasheet-c78-742571.pdf,288,system power at 12.8 Tbps,,,12.8,,,,2,1400,Unknown

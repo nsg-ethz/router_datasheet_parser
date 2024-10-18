@@ -1,0 +1,12 @@
+{
+    "8201-32FH": {
+        "name": "8201-32FH",
+        "typical_power": {
+            "value": 288,
+            "additional_info": "Typical system power at 12.8 Tbps"
+        },
+        "max_power": null,
+        "release_date": null,
+        "psu_rating": null
+    }
+}

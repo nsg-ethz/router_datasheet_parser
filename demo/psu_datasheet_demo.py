@@ -1,5 +1,6 @@
 import json
 import random
+import os
 from typing import Literal, Optional
 
 import pandas as pd
@@ -61,6 +62,7 @@ if __name__ == "__main__":
         # Convert the HTML content to markdown
         markdown_content = md(html_content)
         # Save the markdown content to a file
+        os.makedirs("markdown", exist_ok=True)
         with open(f"markdown/{name}.md", "w") as f:
             f.write(markdown_content)
         # Check the difference in token length for both the HTML and markdown content
@@ -94,7 +96,7 @@ if __name__ == "__main__":
             #print(output)
             data[name] = output_dict
         except Exception as e:
-            #print(f"Error: {e}")
+            print(f"Error: {e}")
             pass
         
     # Save the data to a file

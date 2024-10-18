@@ -1,1 +1,6 @@
+# macOS default
 .DS_Store
+
+# dataset
+dataset/
+demo/markdown/
