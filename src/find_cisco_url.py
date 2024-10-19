@@ -1,6 +1,11 @@
 import os
 import re
 
+"""
+There are 689 files in total under Cisco.
+268 of them contain the URL.
+"""
+
 def find_cisco_url(dir):
 
     # Define the pattern for matching URLs
@@ -26,6 +31,6 @@ def find_cisco_url(dir):
 
 
 if __name__ == "__main__":
-    dir = "Cisco/"
+    dir = "../dataset/Cisco/"
     result = find_cisco_url(dir)
     print(result, len(result))
