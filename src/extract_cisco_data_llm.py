@@ -18,21 +18,16 @@ Parameters we care about:
 """
 
 import json
-import random
 import os
 import re
-from typing import Literal, Optional
-
-import pandas as pd
 import requests
+import yaml
 import tiktoken
+from typing import Literal, Optional
 from markdownify import markdownify as md
 from openai import OpenAI
 from pydantic import BaseModel, Field
 from tqdm import tqdm
-
-# Set random seed
-random.seed(40)
 
 class Power(BaseModel):
     value: int = Field(description="The value in watts")
@@ -45,6 +40,7 @@ class RouterData(BaseModel):
     typical_power: Optional[Power] = Field(description="The typical power consumption of the router")
     max_power: Optional[Power] = Field(description="The maximum power consumption of the router")
     max_throughput: float = Field(description="The maximum throughput or the bandwidth used in the url, typically in the unit of Tbps")
+    # The date has to be a string required by the API: https://community.openai.com/t/getting-a-date-for-a-function/759592
     release_date: Optional[str] = Field(description="Day the router series was released (YYYY-MM-DD format)")
     end_of_sale: Optional[str] = Field(description="The last day which this router was sold (YYYY-MM-DD format)")
     end_of_support: Optional[str] = Field(description="The last day this router was officially supported (YYYY-MM-DD format)")
@@ -75,60 +71,75 @@ if __name__ == "__main__":
     268 of them contain the URL.
     Let's take 8201-31FH as an exmaple, and then extend to others later on.
     """
-    file = "../dataset/Cisco/8201-32FH.yaml"
-    vendor, name = file.split('/')[-2].split('.')[0].lower(), file.split('/')[-1].split('.')[0]
-    url_pattern = re.compile(r'https:\/\/[^\/]+\/[^ ]+\.html')
-    with open(file, 'r') as f:
-        content = f.read()
-        url = url_pattern.search(content).group()
-    print(f"url: {url}")
-    html_content = requests.get(url).text
-
-    """
-    I actually don't really get it why it shall be transferred to the md file.
-    But let's just do it currently.
-    """
-    markdown_content = md(html_content)
-    os.makedirs("../result/markdown", exist_ok=True)
-    with open(f"../result/markdown/{name}.md", "w") as f:
-        f.write(markdown_content)
+    router_dir = "../dataset/Selected_Router/" # TODO: Selected_Router is only for testing purpose, it will be modified later
     
-    # Call the OpenAI API
-    try:
-        completion = client.beta.chat.completions.parse(
-            temperature=0,
-            model="gpt-4o-2024-08-06", #"gpt-4o-mini", #"gpt-4o-2024-08-06", 
-            messages=[ 
-                {
-                    "role": "system", 
-                    "content": system_prompt(name)
-                },
-                {
-                    "role": "user",
-                    "content": markdown_content
-                }
-            ],
-            response_format=RouterData,
-        )
+    for root, dirs, files in os.walk(router_dir):
 
-        # Get the output from your API call
-        output = completion.choices[0].message.parsed
-        print(f"output: {output}")
-        # Dump the model to a dictionary with JSON-compatible formatting
-        output_dict = output.model_dump(mode='json')
-        if not output_dict["datasheet_file"].startswith('https:'):
-            output_dict["datasheet_file"] = "https://www." + str(vendor) + ".com" + output_dict["datasheet_file"]
-        print(f"output_dict: {output_dict}")
-        # Print the dictionary with indentation using json.dumps()
-        output = json.dumps(output_dict, indent=4)
-        #print(output)
-        data[name] = output_dict
-    except Exception as e:
-        print(f"Error: {e}")
-        pass
-    
-    # Save the data to a file
-    with open("../result/data.json", "w") as f:
-        json.dump(data, f, indent=4)
-    
+        for filename in tqdm(files):
+            name = filename.split('/')[-1].split('.')[0]
+            print(f"name: {name}")
+            url_pattern = re.compile(r'https:\/\/[^\/]+\/[^ ]')
+            
+            # Open and load the yaml file
+            with open(os.path.join(router_dir, filename), 'r') as f:
+                content = yaml.safe_load(f)
+                vendor = content.get("manufacturer")
+            url_match = url_pattern.search(str(content))
+            if url_match:
+                url = url_match.group()
+            else:
+                url = None
+                continue
+            print(f"url: {url}")
+            html_content = requests.get(url).text
 
+            # Transfer the HTML to MD to reduce the number of tokens
+            encoding = tiktoken.encoding_for_model("gpt-4o")
+            markdown_content = md(html_content)
+            os.makedirs("../result/markdown", exist_ok=True)
+            with open(f"../result/markdown/{name}.md", "w") as f:
+                f.write(markdown_content)
+
+            # Call the OpenAI API
+            try:
+                completion = client.beta.chat.completions.parse(
+                    temperature=0,
+                    model="gpt-4o-2024-08-06", #"gpt-4o-mini", #"gpt-4o-2024-08-06", 
+                    messages=[ 
+                        {
+                            "role": "system", 
+                            "content": system_prompt(name)
+                        },
+                        {
+                            "role": "user",
+                            "content": markdown_content
+                        }
+                    ],
+                    response_format=RouterData,
+                )
+
+                # Get the output from your API call
+                output = completion.choices[0].message.parsed
+
+                # Dump the model to a dictionary with JSON-compatible formatting
+                output_dict = output.model_dump(mode='json')
+
+                # Delete the vendor from the name to make it precise
+                if vendor in output_dict["name"]:
+                    output_dict["name"] = output_dict["name"].split()[-1].lower()
+
+                # Sometimes, the datasheet(pdf) is not shown correctly
+                if not output_dict["datasheet_file"].startswith('https:'):
+                    output_dict["datasheet_file"] = "https://www." + str(vendor) + ".com" + output_dict["datasheet_file"]
+
+                # Print the dictionary with indentation using json.dumps()
+                output = json.dumps(output_dict, indent=4)
+
+                data[name] = output_dict
+            except Exception as e:
+                print(f"Error: {e}")
+                pass
+            
+            # Save the data to a file
+            with open("../result/data.json", "w") as f:
+                json.dump(data, f, indent=4)

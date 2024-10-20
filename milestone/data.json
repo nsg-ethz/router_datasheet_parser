@@ -1,0 +1,109 @@
+{
+    "8201-24H8FH": {
+        "name": "8201-24H8FH",
+        "vendor": "Cisco",
+        "datasheet_file": "https://www.Cisco.com",
+        "typical_power": null,
+        "max_power": null,
+        "max_throughput": 0.0,
+        "release_date": null,
+        "end_of_sale": null,
+        "end_of_support": null,
+        "num_psu": 0,
+        "psu_rating": null
+    },
+    "ASR-920-24SZ": {
+        "name": "ASR-920-24SZ",
+        "vendor": "Cisco",
+        "datasheet_file": "https://www.Cisco.com",
+        "typical_power": null,
+        "max_power": null,
+        "max_throughput": 0.0,
+        "release_date": null,
+        "end_of_sale": null,
+        "end_of_support": null,
+        "num_psu": 0,
+        "psu_rating": null
+    },
+    "8201-32FH": {
+        "name": "8201-32FH",
+        "vendor": "Cisco",
+        "datasheet_file": "https://www.Cisco.com",
+        "typical_power": null,
+        "max_power": null,
+        "max_throughput": 0.0,
+        "release_date": null,
+        "end_of_sale": null,
+        "end_of_support": null,
+        "num_psu": 0,
+        "psu_rating": null
+    },
+    "C9300-48UXM": {
+        "name": "C9300-48UXM",
+        "vendor": "Cisco",
+        "datasheet_file": "https://www.Cisco.com",
+        "typical_power": null,
+        "max_power": null,
+        "max_throughput": 0.0,
+        "release_date": null,
+        "end_of_sale": null,
+        "end_of_support": null,
+        "num_psu": 0,
+        "psu_rating": null
+    },
+    "DCS-7280CR3K-32D4-F": {
+        "name": "DCS-7280CR3K-32D4-F",
+        "vendor": "Arista",
+        "datasheet_file": "https://www.Arista.comDCS-7280CR3K-32D4-F-datasheet.pdf",
+        "typical_power": null,
+        "max_power": {
+            "value": 800,
+            "power_description": "Maximum power consumption"
+        },
+        "max_throughput": 12.8,
+        "release_date": "2021-06-15",
+        "end_of_sale": null,
+        "end_of_support": null,
+        "num_psu": 2,
+        "psu_rating": "Platinum"
+    },
+    "ASR-920-24SZ-M": {
+        "name": "ASR-920-24SZ-M",
+        "vendor": "Cisco",
+        "datasheet_file": "https://www.Cisco.com",
+        "typical_power": null,
+        "max_power": null,
+        "max_throughput": 0.0,
+        "release_date": null,
+        "end_of_sale": null,
+        "end_of_support": null,
+        "num_psu": 0,
+        "psu_rating": null
+    },
+    "ASR-9001": {
+        "name": "ASR-9001",
+        "vendor": "Cisco",
+        "datasheet_file": "https://www.Cisco.com",
+        "typical_power": null,
+        "max_power": null,
+        "max_throughput": 0.0,
+        "release_date": null,
+        "end_of_sale": null,
+        "end_of_support": null,
+        "num_psu": 0,
+        "psu_rating": null
+    },
+    "ASR-9006": {
+        "name": "ASR-9006",
+        "vendor": "Cisco",
+        "datasheet_file": "https://www.Cisco.com",
+        "typical_power": null,
+        "max_power": null,
+        "max_throughput": 0.0,
+        "release_date": null,
+        "end_of_sale": null,
+        "end_of_support": null,
+        "num_psu": 0,
+        "psu_rating": null
+    }
+}

@@ -1,2 +1,22 @@
 Name,Vendor,Datasheet URL,Datasheet_file,Typical power (W),Typical power (desc),Max power (W),Max power (desc),Max Throughput (Tbps),Release,End-of-Sale,End-of-Support,Number of PSUs,PSU power (W),PSU rating
 8201-32FH,Cisco,https://www.cisco.com/c/en/us/products/collateral/routers/8000-series-routers/datasheet-c78-742571.html,Network%20devices%20%5BDB%5D%2085432de971104cb982867d57e4791c49/datasheet-c78-742571.pdf,288,system power at 12.8 Tbps,,,12.8,,,,2,1400,Unknown
+ASR 920,Cisco,https://www.cisco.com/c/en/us/products/collateral/routers/asr-920-series-aggregation-services-router/datasheet-c78-732103.html,,75,,105,,,"June 30, 2014",,,2,,
+ASR 920-24,Cisco,https://www.cisco.com/c/en/us/products/collateral/routers/asr-920-series-aggregation-services-router/datasheet-c78-733397.html,,110,,150,,,,,,2,,
+ASR 9001,Cisco,,,,,,,,,,,2,,
+ASR 9006,Cisco,https://www.cisco.com/c/en/us/products/collateral/routers/asr-9000-series-aggregation-services-routers/data_sheet_c78-501767.html,,,,,,,"November 11, 2008",,,2,,
+C6504-E,Cisco,https://www.cisco.com/c/en/us/products/collateral/switches/catalyst-6500-series-switches/data_sheet_c78-708665.html,Network%20devices%20%5BDB%5D%2085432de971104cb982867d57e4791c49/data_sheet_c78-708665.pdf,,,2700,,,"May 31, 2005","April 30, 2019","April 30, 2024",2,,
+C9300-48UXM,,https://www.cisco.com/c/en/us/products/collateral/switches/catalyst-9300-series-switches/nb-06-cat9300-ser-data-sheet-cte-en.html,,258,weighted average of loads,277,Full load,1.06,,,,2,1100,Platinium
+"C9300LM-48U-4Y ",Cisco,https://www.cisco.com/c/en/us/products/collateral/switches/catalyst-9300-series-switches/nb-06-cat9300-ser-data-sheet-cte-en.html,,,,,,,,,,2,,
+Cisco 3400,Cisco,,,,,,,,,,,2,,
+Cisco 8201-24H8FH,Cisco,https://www.cisco.com/c/en/us/products/collateral/routers/8000-series-routers/datasheet-c78-742571.html,Network%20devices%20%5BDB%5D%2085432de971104cb982867d57e4791c49/datasheet-c78-742571%201.pdf,,,,,,,,,2,,
+DCS-7280CR3K-32D4-F,Arista,https://www.arista.com/assets/data/pdf/Datasheets/7280R3-Data-Sheet.pdf,,535," at 25C ambient with 50% load on all ports",851,,9.6,,,,2,,
+N9K-C93108TC-EX,Cisco,https://www.cisco.com/c/en/us/products/collateral/switches/nexus-9000-series-switches/datasheet-c78-743149.html,,290,,499,,2.08,"February 29, 2016","August 9, 2022","August 31, 2027",2,,
+N9K-C93600CD-GX,Cisco,,,,,,,,,,,2,,
+N540X-8Z16G-SYS-A,Cisco,https://www.cisco.com/c/en/us/products/collateral/routers/network-convergence-system-500-series-routers/datasheet-c78-744713.html,Network%20devices%20%5BDB%5D%2085432de971104cb982867d57e4791c49/datasheet-c78-744713.pdf,70,,100,,,"August 30, 2019",,,2,0,Unknown
+NCS 55,Cisco,,,,,,,,,,,2,,
+NCS 55A1-24H,Cisco,https://www.cisco.com/c/en/us/products/collateral/routers/network-convergence-system-5500-series/datasheet-c78-739905.html,Network%20devices%20%5BDB%5D%2085432de971104cb982867d57e4791c49/datasheet-c78-742571%202.pdf,600,at 27 degrees Celsius,800,at 55 degrees Celsius,4.8,,,,2,1100,Unknown
+NCS 55A1-24Q6H-SS,Cisco,https://www.cisco.com/c/en/us/products/collateral/routers/network-convergence-system-5500-series/datasheet-c78-743998.html,https://www.cisco.com/c/en/us/products/collateral/routers/network-convergence-system-5500-series/datasheet-c78-743998.pdf,330,,420,,,,,,2,,
+NCS 55A1-48Q6H,Cisco,https://www.cisco.com/c/en/us/products/collateral/routers/network-convergence-system-5500-series/datasheet-c78-742295.html?dtid=osscdc000283,Network%20devices%20%5BDB%5D%2085432de971104cb982867d57e4791c49/datasheet-c78-742295.pdf,460,,700,,,,"March 29, 2025","March 31, 2030",2,,
+NCS 540,Cisco,,,,,,,,,,,2,,
+NCS 540-28Z4C,Cisco,https://www.cisco.com/c/en/us/products/collateral/routers/network-convergence-system-500-series-routers/datasheet-c78-740296.html,https://www.cisco.com/c/en/us/products/collateral/routers/network-convergence-system-500-series-routers/datasheet-c78-740296.pdf,,,,,,,,,2,,
+,,,,,,,,,,,,,,

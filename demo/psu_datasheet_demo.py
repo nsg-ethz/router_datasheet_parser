@@ -56,7 +56,7 @@ if __name__ == "__main__":
         url = row["Datasheet URL"]
         if pd.isna(url):
             continue
-        #print(f"Looking into the datasheet of router: {name}")
+        print(f"Looking into the datasheet of router: {name}")
         # Grab the HTML content of the datasheet
         html_content = requests.get(url).text
         # Convert the HTML content to markdown
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         # Check the difference in token length for both the HTML and markdown content
         encoding = tiktoken.encoding_for_model("gpt-4o")
         #print(f"HTML token length: {len(encoding.encode(html_content))}")
-        #print(f"Markdown token length: {len(encoding.encode(markdown_content))}")
+        print(f"Markdown token length: {len(encoding.encode(markdown_content))}")
         # Query the model with the markdown content
         try:
             completion = client.beta.chat.completions.parse(
