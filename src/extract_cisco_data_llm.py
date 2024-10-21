@@ -78,18 +78,20 @@ if __name__ == "__main__":
         for filename in tqdm(files):
             name = filename.split('/')[-1].split('.')[0]
             print(f"name: {name}")
-            url_pattern = re.compile(r'https:\/\/[^\/]+\/[^ ]')
+            url_pattern = re.compile(r'https?://[^\s]+')
             
             # Open and load the yaml file
             with open(os.path.join(router_dir, filename), 'r') as f:
                 content = yaml.safe_load(f)
-                vendor = content.get("manufacturer")
-            url_match = url_pattern.search(str(content))
+                vendor = content.get("manufacturer").lower()
+                url = content.get("comments")
+            url_match = url_pattern.search(str(url))
             if url_match:
-                url = url_match.group()
+                url = url_match.group()[:-1]
             else:
                 url = None
                 continue
+
             print(f"url: {url}")
             html_content = requests.get(url).text
 
@@ -126,7 +128,7 @@ if __name__ == "__main__":
 
                 # Delete the vendor from the name to make it precise
                 if vendor in output_dict["name"]:
-                    output_dict["name"] = output_dict["name"].split()[-1].lower()
+                    output_dict["name"] = output_dict["name"].split()[-1]
 
                 # Sometimes, the datasheet(pdf) is not shown correctly
                 if not output_dict["datasheet_file"].startswith('https:'):
