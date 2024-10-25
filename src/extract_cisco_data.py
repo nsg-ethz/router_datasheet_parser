@@ -2,51 +2,95 @@ import os
 import re
 import requests
 import yaml
-import tiktoken
 from typing import Literal, Optional
 from markdownify import markdownify as md
 from openai import OpenAI
 from pydantic import BaseModel, Field
 from tqdm import tqdm
 
-class Power(BaseModel):
-    value: int = Field(description="The value in watts")
-    power_description: Optional[str] = Field(description="The power description that may be associated with the power value (such as the temperature, throughput, ...)")
 
+# Class to represent the PSU details
+class PSU(BaseModel):
+    efficiency_rating: Optional[Literal["Bronze", "Silver", "Gold", "Platinum"]] = Field(description="If provided, the rating of the router's Power Supply Unit (PSU)")
+    power_rating: Optional[float] = Field(description="How much power a PSU can deliver (unit in watts)")
+    number_of_modules: int = Field(description="The number of Power Supply Units (PSUs) used for this router")
+    part_number: Optional[str] = Field(description="The part number of this PSU")
+
+
+# The max/typical power that the router can draw
+class Power(BaseModel):
+    value: int = Field(description="The maximum or the typical power that the router can draw (unit in watts)")
+    description: Optional[str] = Field(description="The power description that may be associated with the power value (such as the temperature, throughput, ...)")
+
+
+# The overall infomation of a router
 class RouterData(BaseModel):
-    datasheet_file: str = Field(description="The pdf file stroing the information on this router device")
+    pdf_file: str = Field(description="The pdf file storing the information on this router device")
     typical_power_draw: Optional[Power] = Field(description="The typical power consumption of the router")
     max_power_draw: Optional[Power] = Field(description="The maximum power consumption of the router")
-    max_throughput: float = Field(description="The maximum throughput or the bandwidth used in the url, typically in the unit of Tbps")
-    # The date has to be a string required by the API: https://community.openai.com/t/getting-a-date-for-a-function/759592
+    max_throughput: float = Field(description="The maximum throughput or the bandwidth used in the url, usually in the unit of Tbps")
     release_date: Optional[str] = Field(description="Day the router series was released (YYYY-MM-DD format)")
     end_of_sale: Optional[str] = Field(description="The last day which this router was sold (YYYY-MM-DD format)")
     end_of_support: Optional[str] = Field(description="The last day this router was officially supported (YYYY-MM-DD format)")
-    num_psu: int = Field(description="The number of Power Supply Units (PSUs)")
-    psu_rating: Optional[Literal["Bronze", "Silver", "Gold", "Platinum"]] = Field(description="If provided, the rating of the router's Power Supply Unit (PSU)")
+    psu: Optional[PSU] = Field(description="The Power Supplier Unit(PSU) related data")
+
+
+def filter_info_from_netbox(filename):
+
+    netbox_info = {}
+
+    with open(filename, "r") as f:
+        content = yaml.safe_load(f)
+        print("content: ", content)
+
+        netbox_info["manufacturer"] = content["manufacturer"]
+        netbox_info["model"] = content["model"]
+        netbox_info["slug"] = content["slug"]
+        netbox_info["part_number"] = content["part_number"]
+        netbox_info["u_height"] = content["u_height"]
+
+        # URL
+        url = content.get("comments")
+        url_pattern = re.compile(r'https?://[^\s]+')
+        url_match = url_pattern.search(str(url))
+        if url_match:
+            url = url_match.group()[:-1]
+        else:
+            url = None
+            # Log the files which don't have the url
+            with open("../result/routers_without_url.csv", "a") as router_without_url:
+                router_without_url.write(f"{filename}\n")
+
+        # PSU
+
 
 
 def data_parsing(router_dir):
 
     PERSONA         =   "You are a knowledgeable network engineer with expertise in router technologies."
     HIGH_LEVEL_TASK =   "You are tasked with gathering detailed information on various routers within your network." \
-                        "Your objective is to scan provided URLs that contain router data and extract relevant information about the PSUs." 
+                        "Your objective is to scan the provided URLs that contain router data and extract relevant information about the associated router." 
     LOW_LEVEL_TASK  =   lambda name: f"I will give you the URL containing the information you are after. You are looking for the data relevant only to router {name}" \
                         "Your task is to use your expertise and the URL I provided to try to extract the information and fill out the fields of the given structure. " \
                         "If the information is not present, you can leave the field empty. If you are unsure, leave the field empty.\n" \
                         "Only use the information contained in the URL." \
-                        "Please pay attention to that the URL is the router series, meaning that it will contain the info of other routers in the same series.\n" \
+                        "Please note that the URL is the router series, meaning that it will contain the info of other routers in the same series.\n" \
                         "For example, on the url of router 8201-32FH, it will contain information of Cisco 8201-SYS.\n" \
+                        "For the pdf file, please return to the full URL links." \
                         "Your goal is to avoid grapping info of Cisco 8201-SYS and pay attention to only 8202-32FH."
 
     # For future reference, can build Lambdas into this using: TEXT_AMOUNT = lambda amount: f'text {amount}'
     system_prompt = lambda name: "\n".join([PERSONA, HIGH_LEVEL_TASK, LOW_LEVEL_TASK(name)])
 
     client = OpenAI()
+
+    # Create an empty file for storing the routers without the URL
+    with open("../result/routers_without_url.csv", "w") as router_without_url:
+        pass
     
-    # files = [f for f in os.listdir(router_dir) if os.path.isfile(os.path.join(router_dir, f))]
-    files = ["8201-24H8FH.yaml", "8201-32FH.yaml", "ASR-920-24SZ-M.yaml"]
-    # files = ["8201-24H8FH.yaml"]
+    files = [f for f in os.listdir(router_dir) if os.path.isfile(os.path.join(router_dir, f))]
+    # files = ["8201-24H8FH.yaml", "8201-32FH.yaml", "ASR-920-24SZ-M.yaml", "2951-ISR.yaml", "AIR-AP1562D-B-K9.yaml"]
+    files = ["8201-24H8FH.yaml"]
 
     for filename in tqdm(files):
 
@@ -63,6 +107,9 @@ def data_parsing(router_dir):
             url = url_match.group()[:-1]
         else:
             url = None
+            # Log the files which don't have the url
+            with open("../result/routers_without_url.csv", "a") as router_without_url:
+                router_without_url.write(f"{filename}\n")
             continue
 
         print(f"url: {url}")
@@ -87,8 +134,8 @@ def data_parsing(router_dir):
         try:
             completion = client.beta.chat.completions.parse(
                 temperature=0,
-                # model = "gpt-4o-mini",
-                model = "gpt-4o-2024-08-06",
+                model = "gpt-4o-mini-2024-07-18",
+                # model = "gpt-4o-2024-08-06",
                 messages=[ 
                     {
                         "role": "system", 
@@ -102,45 +149,25 @@ def data_parsing(router_dir):
                 response_format=RouterData,
             )
 
-            # Get the output from your API call
+            # output is the result coming from the GPT
             output = completion.choices[0].message.parsed
 
-            # Dump the model to a dictionary with JSON-compatible formatting
+            # Dump the model to a dictionary with yaml-compatible formatting
             output = output.model_dump(mode='yaml')
-            # print(f"output: {output}")
+            print(f"output: {output}")
 
-            # Sometimes, the datasheet(pdf) is not shown correctly
-            output_dict["datasheet_file"] = output["datasheet_file"]
-            if not output_dict["datasheet_file"].startswith('https:'):
-                output_dict["datasheet_file"] = "https://www." + str(content.get("manufacturer")).lower() + ".com" + output_dict["datasheet_file"]
+            output_dict["pdf_file"] = output["pdf_file"]
             output_dict["release_date"] = output["release_date"]
             output_dict["end_of_sale"] = output["end_of_sale"]
             output_dict["end_of_support"] = output["end_of_support"]
             output_dict["max_throughput(Tbps)"] = output["max_throughput"]
 
             # Max and typical power draw
-            output_dict["maximum_power_draw"] = output["max_power_draw"]
-            output_dict["typical_power_draw"] = output["typical_power_draw"]
+            output_dict["max_power_draw(W)"] = output["max_power_draw"]
+            output_dict["typical_power_draw(W)"] = output["typical_power_draw"]
 
             # PSU related
-            output_dict["PSU"] = {}
-            output_dict["PSU"]["efficiency_rating"] = output["psu_rating"]
-            output_dict["PSU"]["power_rating(W)"] = None # Currently leave it blank
-
-            # Some files contain the power-ports
-            if content.get("power-ports"):
-                output_dict["PSU"]["number_of_modules"] = len(content.get("power-ports", []))
-                output_dict["PSU"]["part_number"] = content.get("power-ports")[0]["type"]
-            
-            # Some files contain the model-bays
-            elif content.get("module-bays"):
-                output_dict["PSU"]["number_of_modules"] = len(content.get("module-bays", []))
-                output_dict["PSU"]["part_number"] = None
-            
-            # Some don't contain both
-            else:
-                output_dict["PSU"]["number_of_modules"] = output["num_psu"]
-                output_dict["PSU"]["part_number"] = None
+            output_dict["PSU"] = output["psu"]
 
         except Exception as e:
             print(f"Error: {e}")
@@ -152,7 +179,16 @@ def data_parsing(router_dir):
         with open(yaml_name, "w") as yaml_file:
             yaml.dump(output_dict, yaml_file, default_flow_style=False, sort_keys=False)
 
+
 if __name__ == "__main__":
 
-    router_dir = "../dataset/Selected_Router/" # TODO: Selected_Router is only for testing purpose, it will be modified later
-    data_parsing(router_dir)
+    router_dir = "../dataset/Cisco/"
+
+    # Create an empty file for storing the routers without the URL
+    with open("../result/routers_without_url.csv", "w") as router_without_url:
+        pass
+
+    for file in tqdm(files):
+        print("file: ", file)
+        filter_info_from_netbox(os.path.join(router_dir, file))
+        break
