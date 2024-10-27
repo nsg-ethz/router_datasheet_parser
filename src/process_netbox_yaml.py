@@ -1,9 +1,10 @@
-import yaml
 import os
+import yaml
+import csv
 import json
+import re
 from tqdm import tqdm
 from collections import Counter, defaultdict
-from openai import OpenAI
 
 
 def count_netbox_keys(router_dir):
@@ -64,6 +65,10 @@ def write_netbox_result(psu_category, router_dir):
         data = json.load(json_file)
         psu_list = data["psu"]
         non_psu_list = data["non_psu"]
+    
+    with open("../result/routers_without_url.csv", mode="w", newline="") as routers_without_url:
+        writer = csv.writer(routers_without_url)
+        writer.writerow(["manufacturer", "model"])
 
     files = [f for f in os.listdir(router_dir) if os.path.isfile(os.path.join(router_dir, f))]
     # testing files
@@ -79,22 +84,43 @@ def write_netbox_result(psu_category, router_dir):
 
         # Get prepared for writing this router info
         output_dict = {}
-        output_dict["manufacturer"] = content["manufacturer"]
-        output_dict["model"] = content["model"]
+        output_dict["manufacturer"] = content.get("manufacturer", output_dict.get("manufacturer"))
+        output_dict["model"] = content.get("model", output_dict.get("model"))
         print("model: ", output_dict["model"])
-        output_dict["slug"] = content["slug"]
-        output_dict["part_number"] = content["part_number"]
-        output_dict["u_height"] = content["u_height"]
+        output_dict["slug"] = content.get("slug", output_dict.get("slug"))
+        output_dict["part_number"] = content.get("part_number", output_dict.get("part_number"))
+        output_dict["u_height"] = content.get("u_height", output_dict.get("u_height"))
 
-        # PSU related
-        output_dict["number_of_modules"] = 0
+        # Log the model name in the CSV if "url is missing"
+        url = content.get("comments")
+        url_pattern = re.compile(r'https?://[^\s]+')
+        url_match = url_pattern.search(str(url))
+        if url_match:
+            url = url_match.group()[:-1]
+            output_dict["url"] = url
+        else:
+            with open("../result/routers_without_url.csv", mode="a", newline="") as routers_without_url:
+                writer = csv.writer(routers_without_url)
+                writer.writerow([output_dict["manufacturer"], output_dict["model"]])
+
+        """
+        PSU related:
+        1. efficiency_rating -> [Bronze, Silver, Gold, Platinum, Titanium] -> LLM
+        2. power_rating -> maximum_draw -> netbox
+        3. numbers_of_modules -> netbox
+        4. part_number -> netbox
+        """
+        output_dict["PSU"] = {"number_of_modules": 0, "efficiency_rating": None, "power_rating": None, "part_number": None}
 
         # Iterate over potential power sources if they exist
         for key in ["power-ports", "module-bays"]:
             if content.get(key):
                 for module in content[key]:
                     if module["name"] in psu_list:
-                        output_dict["number_of_modules"] += 1
+                        print("module: ", module)
+                        output_dict["PSU"]["number_of_modules"] += 1
+                        output_dict["PSU"]["power_rating"] = module.get("maximum_draw", None)
+                        output_dict["PSU"]["part_number"] = module.get("type", None)
                 # Exit after processing "power-ports" if found
                 break
         
