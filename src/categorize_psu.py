@@ -2,7 +2,7 @@ import os
 import yaml
 from tqdm import tqdm
 from collections import Counter, defaultdict
-
+from load_file import *
 
 def count_netbox_keys(router_dir):
     """
@@ -48,9 +48,8 @@ def count_netbox_keys(router_dir):
 
     # Iterate through all files in the directory
     for filename in tqdm(files):
-        with open(os.path.join(router_dir, filename), "r") as f:
-            content = yaml.safe_load(f)
-            process_nested_dict(content)
+        content = load_yaml(os.path.join(router_dir, filename))
+        process_nested_dict(content)
 
     return key_counter, specific_name_counter
 
@@ -65,7 +64,6 @@ if __name__ == "__main__":
     data_to_store = {**dict(key_counts), **{parent_key + ".name": dict(names) for parent_key, names in specific_name_counts.items()}}
 
     # Write the results to the YAML file
-    with open(netbox_keys_file, "w") as yaml_file:
-        yaml.dump(data_to_store, yaml_file, default_flow_style=False, sort_keys=False)
+    save_yaml(data_to_store, netbox_keys_file)
 
     print(f"Results have been saved to {netbox_keys_file}")
