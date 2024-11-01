@@ -1,4 +1,3 @@
-import os
 from tqdm import tqdm
 from collections import OrderedDict
 from load_file import *
@@ -46,8 +45,8 @@ def organize_dicts(data):
         ("slug", data["slug"]),
         ("part_number", data["part_number"]),
         ("u_height", data["u_height"]),
-        ("url", data["url"]),
-        ("pdf_file", data["pdf_file"]),
+        ("datasheet_url", data["datasheet_url"]),
+        ("datasheet_pdf", data["datasheet_pdf"]),
         ("release_date", data["release_date"]),
         ("end_of_sale", data["end_of_sale"]),
         ("end_of_support", data["end_of_support"]),

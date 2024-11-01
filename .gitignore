@@ -1,5 +1,6 @@
-# macOS default
+# macOS default and venv
 .DS_Store
+src/__pycache__/
 
 # dataset
 dataset/

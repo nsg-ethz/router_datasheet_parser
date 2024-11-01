@@ -58,3 +58,25 @@ def save_yaml(data, file_path):
     """
     with open(file_path, "w") as f:
         yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+
+
+def load_prompt_components(file_path, router_name):
+    
+    with open(file_path, "r") as file:
+        lines = file.readlines()
+
+    # Parse components from the file
+    components = {"PERSONA": "", "HIGH_LEVEL_TASK": "", "LOW_LEVEL_TASK": ""}
+    current_key = None
+
+    for line in lines:
+        line = line.strip()
+        if line in components:
+            current_key = line
+        elif current_key:
+            components[current_key] += line + "\n"
+    
+    # Format the LOW_LEVEL_TASK with the router_name
+    components["LOW_LEVEL_TASK"] = components["LOW_LEVEL_TASK"].format(router_name=router_name)
+
+    return components

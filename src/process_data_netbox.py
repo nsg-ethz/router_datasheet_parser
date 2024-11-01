@@ -35,7 +35,6 @@ def filter_netbox_info(psu_category, content, routers_without_url):
     with open(psu_category, "r") as json_file:
         data = json.load(json_file)
         psu_list = data["psu"]
-        # non_psu_list = data["non_psu"]
 
     # Create a folder for a specific router
     output_dir = "../result/" + str(content["manufacturer"]) + "/" + str(content["model"]) + "/"
@@ -57,9 +56,9 @@ def filter_netbox_info(psu_category, content, routers_without_url):
     url_match = url_pattern.search(str(url))
     if url_match:
         url = url_match.group()[:-1]
-        output_dict["url"] = url
+        output_dict["datasheet_url"] = url
     else:
-        output_dict["url"] = None
+        output_dict["datasheet_url"] = None
         record_without_url_csv(routers_without_url, output_dict["manufacturer"], output_dict["model"])
 
     """
