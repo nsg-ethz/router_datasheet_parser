@@ -25,8 +25,8 @@ class Throughput(BaseModel):
 
 # Class to represent the PSU details
 class PSU(BaseModel):
-    efficiency_rating: Optional[Literal["Bronze", "Silver", "Gold", "Platinum"]] = Field(description="If provided, the rating of the router's Power Supply Unit (PSU)")
-    power_rating: Optional[float] = Field(description="How much power a PSU can deliver (unit in watts)")
+    efficiency_rating: Optional[Literal["Bronze", "Silver", "Gold", "Platinum"]] = Field(description="The 80 Plus certification level indicating the power supply unit's efficiency, with ratings from Bronze to Platinum, where higher levels signify greater energy efficiency.")
+    power_rating: Optional[Power] = Field(description="How much power a PSU can deliver")
     number_of_modules: int = Field(description="The number of Power Supply Units (PSUs) used for this router")
     part_number: Optional[str] = Field(description="The part number of this PSU")
 
@@ -36,7 +36,7 @@ class RouterInfo(BaseModel):
     datasheet_pdf: str = Field(description="The pdf file storing the information on this router device.")
     typical_power_draw: Optional[Power] = Field(description="This is the usual amount of power comsumed by the device under normal operating conditions. It reflects the average power usage when the device is functioning with a typical load.")
     max_power_draw: Optional[Power] = Field(description="This is the maximum amount of power the router can consume, usually measured under peak load or stressful conditions. It represents the highest power demand the device will require, typically when all resources are being utilized to their fullest capacity.")
-    max_poe_draw: Optional[Power] = Field(description="This is the maximum PoE consumption. PoE can deliver data and power over a single Ethernet cable.")
+    max_poe_draw: Optional[Power] = Field(description="This is the maximum Power over Ethernet consumption. PoE enables network cables to supply both data and electrical power to devices.")
     max_throughput: Optional[Throughput] = Field(description="The maximum throughput or the bandwidth used in the url, usually in the unit of Tbps or Gbps")
     psu: Optional[PSU] = Field(description="The Power Supplier Unit(PSU) related data")
 
@@ -140,8 +140,8 @@ def process_router_date_llm(router_name):
     try:
         completion = client.beta.chat.completions.parse(
             # This model is only for debug. It will be changed to a more powerful model
-            model = "gpt-4o-mini",
-            # model = "gpt-4o-2024-08-06",
+            # model = "gpt-4o-mini",
+            model = "gpt-4o-2024-08-06",
             messages=[
                 {
                     "role": "system",
@@ -173,14 +173,15 @@ if __name__ == "__main__":
     routers_without_url = "../result/routers_without_url.csv"
 
     router_names = [name for name in os.listdir(result_directory) if os.path.isdir(os.path.join(result_directory, name))]
-    random.seed(42)
-    random_selection = random.sample(router_names, 5)
+    # random.seed(42)
+    # random_selection = random.sample(router_names, 5)
+    testing_router_names = ["8201-32FH", "Catalyst 9300-48UXM", "Nexus 93108TC-EX"]
 
-    for router_name in tqdm(random_selection):
-    
+    # for router_name in tqdm(random_selection):
+    for router_name in tqdm(["Nexus 93108TC-EX"]):
         # This router contains the URL
         if not is_model_without_url(router_name, routers_without_url):
-            print("=====================================================")
+            print("===================================================================================================")
             print("router name: ", router_name)
             filtered_netbox_file = result_directory + router_name + "/" + router_name + "_filtered_netbox.yaml"
             url = load_yaml(filtered_netbox_file)["datasheet_url"]
@@ -191,8 +192,8 @@ if __name__ == "__main__":
             router_url_llm_file = router_name + "_url_llm.yaml"
             save_yaml(parsed_router_url_llm, router_result_dirctory+router_url_llm_file)
         
-        # Write the date into the yaml
-        router_result_dirctory = result_directory + router_name + "/"
-        router_date_llm_file = router_name + "_date_llm.yaml"
-        parsed_router_date_llm = process_router_date_llm(router_name)
-        save_yaml(parsed_router_date_llm, router_result_dirctory+router_date_llm_file)
+            # Write the date into the yaml
+            # router_result_dirctory = result_directory + router_name + "/"
+            # router_date_llm_file = router_name + "_date_llm.yaml"
+            # parsed_router_date_llm = process_router_date_llm(router_name)
+            # save_yaml(parsed_router_date_llm, router_result_dirctory+router_date_llm_file)
