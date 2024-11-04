@@ -18,10 +18,13 @@ Here are some key points which you may pay attention to:
     For instance, the datasheet for router 8201-32FH also contains information on Cisco 8201-SYS.
     Your goal is to exclude details related to Cisco 8201-SYS or other models, focusing solely on the designated router, e.g., 8202-32FH.
     Specifically, 415W is the typical system power for 8201-SYS not for 8201-32FH.
-3.  Please pay attention to the difference between typical_power_draw, max_power_draw and max_poe_draw.
+3.  There is a feature in RouterInfo called 'is_poe_capable', it is a boolen value judging if this router is PoE capable.
+    If it is not PoE capable, then you don't need to extract the info about the max_poe_draw.
+4.  Please pay attention to the differences among typical_power_draw, max_power_draw and max_poe_draw.
     typical_power_draw: The usual amount of power a device usually consumes under normal operating conditions.
     max_power_draw: The maximum power a device can consume when operating at full capacity or under peak load conditions.
     max_poe_draw: The highest power a device can draw specifically over a PoE connection.
+    Besides, for the typical/max_power_draw, the typical_power_draw is typically smaller than the max_power_draw in theory.
     Please refer to the following examples.
     "Cisco Catalyst 9115AXI-E":
     The max PoE Power Consumption is 20.4 W. And no typical/max_power_draw can be found.
@@ -34,8 +37,10 @@ Here are some key points which you may pay attention to:
     The typical_power_draw is 258W, found under the column 'Weighted average Pw' in the row 'C9300-48UXM'.
     The max_power_draw is 277.2W, listed under the column '100% Full port traffic' in the same row.
     While max_power_draw isn’t explicitly labeled, '100% Full port traffic' reasonably represents max_power_draw based on common industry knowledge.
-4.  The power_rating is defined as 'How much power a PSU can deliver'. Its unit is usually in watts.
-    In the description, you can provide some more information related to this.
-    For example, 1100W is the power_rating for router C9300-48UXM, but 1900W can also be found online as upgrade version of the power supply.
-5.  For the pdf file, please return to the full URL links.
-6.  For the typical/max power draw, the typical power draw is typically smaller than the power draw in theory.
+    You can find two numbers for the max_poe_draw: One is 1290W and another is 490W under the column 'Available PoE'
+    You can also find that 1290W belongs to the Upgrade and 490W belongs to the default.
+    So, in the output, you can put 1290 for the max_power_draw in the value and write in the description that 1290W is for the upgrade PoE and the 490W is for the default PoE.
+5.  The power_rating is defined as 'How much power a PSU can deliver'. Its unit is usually in watts, and it is the feature related to the PSU rather than router.
+    If there are multiple values related to it, then put the maximum value to it and describe it specifically in the description for the rest.
+    For example, 1900W is the power_rating for router C9300-48UXM, but 1100W can also be found online as default version of the power supply.
+6.  For the pdf file, please return to the full URL links, normally begining with 'http'.

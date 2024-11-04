@@ -34,10 +34,11 @@ class PSU(BaseModel):
 # The overall infomation of a router
 class RouterInfo(BaseModel):
     datasheet_pdf: str = Field(description="The pdf file storing the information on this router device.")
-    typical_power_draw: Optional[Power] = Field(description="This is the usual amount of power comsumed by the device under normal operating conditions. It reflects the average power usage when the device is functioning with a typical load.")
-    max_power_draw: Optional[Power] = Field(description="This is the maximum amount of power the router can consume, usually measured under peak load or stressful conditions. It represents the highest power demand the device will require, typically when all resources are being utilized to their fullest capacity.")
-    max_poe_draw: Optional[Power] = Field(description="This is the maximum Power over Ethernet consumption. PoE enables network cables to supply both data and electrical power to devices.")
     max_throughput: Optional[Throughput] = Field(description="The maximum throughput or the bandwidth used in the url, usually in the unit of Tbps or Gbps")
+    typical_power_draw: Optional[Power] = Field(description="This is the usual amount of power comsumed by the device under normal operating conditions. It reflects the average power usage when the device is functioning with a typical load")
+    max_power_draw: Optional[Power] = Field(description="This is the maximum amount of power the router can consume, usually measured under peak load or stressful conditions. It represents the highest power demand the device will require, typically when all resources are being utilized to their fullest capacity")
+    is_poe_capable: bool = Field(description="A boolean value. If this router is poe_capable, then return true, otherwise return false")
+    max_poe_draw: Optional[Power] = Field(description="This is the maximum Power over Ethernet consumption. PoE enables network cables to supply both data and electrical power to devices")
     psu: Optional[PSU] = Field(description="The Power Supplier Unit(PSU) related data")
 
 
@@ -91,6 +92,7 @@ def process_datasheet_url_llm(router_name, url):
         completion = client.beta.chat.completions.parse(
             # This model is only for debug. It will be changed to a more powerful model
             # model = "gpt-4o-mini",
+            temperature = 0,
             model = "gpt-4o-2024-08-06",
             messages=[
                 {
@@ -178,7 +180,7 @@ if __name__ == "__main__":
     testing_router_names = ["8201-32FH", "Catalyst 9300-48UXM", "Nexus 93108TC-EX"]
 
     # for router_name in tqdm(random_selection):
-    for router_name in tqdm(["Nexus 93108TC-EX"]):
+    for router_name in tqdm(testing_router_names):
         # This router contains the URL
         if not is_model_without_url(router_name, routers_without_url):
             print("===================================================================================================")
