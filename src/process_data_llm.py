@@ -71,7 +71,7 @@ def process_datasheet_with_url_llm(router_name, url):
         url:            The URL of this model
     """
     print("url : ", url)
-    prompt_file = "process_datasheet_prompt.txt"
+    prompt_file = "process_datasheet_with_url_prompt.txt"
     components = load_prompt_components(prompt_file, router_name)
     
     # Define the system_prompt
@@ -105,6 +105,52 @@ def process_datasheet_with_url_llm(router_name, url):
                 {
                     "role": "user",
                     "content": markdown_content
+                }
+            ],
+            response_format=RouterInfo,
+        )
+
+        output = completion.choices[0].message.parsed
+        print("output: \n", output)
+        parsed_router_url_llm = output.model_dump(mode="yaml")
+
+        # Extract units
+        return parsed_router_url_llm
+    
+    except Exception as e:
+        print("Error: ", e)
+        pass
+
+
+def process_datasheet_without_url_llm(router_name):
+
+    prompt_file = "process_datasheet_without_url_prompt.txt"
+    components = load_prompt_components(prompt_file, router_name)
+
+    # Define the system_prompt
+    system_prompt = "\n".join([
+        components["PERSONA"],
+        components["HIGH_LEVEL_TASK"],
+        components["LOW_LEVEL_TASK"]
+    ])
+
+    client = OpenAI()
+
+
+    # Call the OpenAI API
+    try:
+        completion = client.beta.chat.completions.parse(
+            # model = "gpt-4o-mini",
+            temperature = 0,
+            model = "gpt-4o-2024-08-06",
+            messages=[
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": "Let's find the router information based on the prompt"
                 }
             ],
             response_format=RouterInfo,
@@ -232,21 +278,21 @@ if __name__ == "__main__":
 
     # for router_name in tqdm(random_selection):
     for router_name in tqdm(random_selection):
+        print("==================================================================================================")
+        print("router name: ", router_name)
+        filtered_netbox_file = result_directory + router_name + "/" + router_name + "_filtered_netbox.yaml"
         # This router contains the URL
         if not is_model_without_url(router_name, routers_without_url):
-            print("=======================================================================================================================")
-            print("router name: ", router_name)
-            filtered_netbox_file = result_directory + router_name + "/" + router_name + "_filtered_netbox.yaml"
             url = load_yaml(filtered_netbox_file)["datasheet_url"]
-            parsed_router_url_llm = process_datasheet_with_url_llm(router_name, url)
-
-            # Write the info parsed by LLM to a yaml file and store it in the same directory of its associated filtered_network.yaml
-            router_result_dirctory = result_directory + router_name + "/"
-            router_url_llm_file = router_name + "_url_llm.yaml"
-            save_yaml(parsed_router_url_llm, router_result_dirctory+router_url_llm_file)
+            parsed_router_info_llm = process_datasheet_with_url_llm(router_name, url)
         
         else:
-            # TODO: use llm to directly extract the information (it will be very helpful for those routers without the url)
+            parsed_router_info_llm = process_datasheet_without_url_llm(router_name)
+        
+        # Write the info parsed by LLM to a yaml file and store it in the same directory of its associated filtered_network.yaml
+        router_result_dirctory = result_directory + router_name + "/"
+        router_general_llm_file = router_name + "_general_llm.yaml"
+        save_yaml(parsed_router_info_llm, router_result_dirctory+router_general_llm_file)
         
         # # Write the date into the yaml
         # router_result_dirctory = result_directory + router_name + "/"

@@ -16,8 +16,7 @@ Here are some key points which you may pay attention to:
 2.  Please note that the URL may sometimes include information about the entire router series, covering details for multiple models within it.
     While some information may apply to all routers in the series, specific details should be verified to ensure relevance to the target model. 
     For instance, the datasheet for router 8201-32FH also contains information on Cisco 8201-SYS.
-    Your goal is to exclude details related to Cisco 8201-SYS or other models, focusing solely on the designated router, e.g., 8202-32FH.
-    Specifically, 415W is the typical system power for 8201-SYS not for 8201-32FH.
+    Your goal is to exclude details related to Cisco 8201-SYS or other models, focusing solely on the designated router, e.g., 8202-32FH. Specifically, 415W is the typical system power for 8201-SYS not for 8201-32FH.
 3.  There is a feature in RouterInfo called 'is_poe_capable', it is a boolen value judging if this router is Power over Ethernet (PoE) capable. If it is not PoE capable, then you can skip the step of extracting the info about the max_poe_draw.
 4.  Please pay attention to the differences among typical_power_draw, max_power_draw and max_poe_draw.
     typical_power_draw: The usual amount of power a device usually consumes under normal operating conditions.
@@ -34,4 +33,4 @@ Here are some key points which you may pay attention to:
 6.  number_of_modules refers to the quantity of PSUs (Power Supply Units) a router contains. This information may not always be explicitly stated on the webpage.
     For example, in Table 4 of the C9300-48UXM webpage, the 'Power Supply Models' section lists a “Primary Power Supply” along with four optional 'Secondary PS' units. Therefore, the number_of_modules should be recorded as 2. 
     Conversely, for the N540-28Z4C-SYS-D model, while Table 5 mentions 'Power Supplies', no specific PSU information is provided. In such cases, you may leave number_of_modules empty.
-7.  For the PDF file, please provide the full URL, which typically begins with “http”.
+7.  For the PDF file, please provide the full URL, which typically begins with 'http' and ends with '.com' or '.html' or '.pdf'.
