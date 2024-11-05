@@ -42,15 +42,19 @@ class RouterInfo(BaseModel):
     psu: Optional[PSU] = Field(description="The Power Supplier Unit(PSU) related data")
 
 
-class DateReference(BaseModel):
-    date: str = Field(description="A date format in YYYY-MM-DD")
+class ValueReference(BaseModel):
+    value: str = Field(description="A value based on a specific class. In our current case, it can be either date of router_type")
     reference: str = Field(description="A reference link or source indicating where this date is found online")
 
 
 class RouterDate(BaseModel):
-    release_date: Optional[DateReference] = Field(description="The date when the product was first made available to the public. It marks the start of the product's lifecycle on the market")
-    end_of_sale: Optional[DateReference] = Field(description="The last date on which the product could be purchased. After this date, the product is no longer available for sale from the manufacturer")
-    end_of_support: Optional[DateReference] = Field(description="The final date which the manufacturer will provide support. After this date, official support ends, and the product is considered 'end of life'")
+    release_date: Optional[ValueReference] = Field(description="The date when the product was first made available to the public in the format of YYYY-MM-DD. It marks the start of the product's lifecycle on the market")
+    end_of_sale: Optional[ValueReference] = Field(description="The last date on which the product could be purchased in the format of YYYY-MM-DD. After this date, the product is no longer available for sale from the manufacturer")
+    end_of_support: Optional[ValueReference] = Field(description="The final date which the manufacturer will provide support in the format of YYYY-MM-DD. After this date, official support ends, and the product is considered 'end of life'")
+
+
+class RouterType(BaseModel):
+    router_type: Optional[ValueReference] = Field(description="The category of the router, such as 'edge', 'core', 'distribution', among others.")
 
 
 def is_model_without_url(model, routers_without_url_csv):
@@ -58,7 +62,7 @@ def is_model_without_url(model, routers_without_url_csv):
     return model in df["model"].values
 
 
-def process_datasheet_url_llm(router_name, url):
+def process_datasheet_with_url_llm(router_name, url):
     """
     Use the OpenAI API to help us extract the information based on provided URL.
     
@@ -90,7 +94,6 @@ def process_datasheet_url_llm(router_name, url):
     # Call the OpenAI API
     try:
         completion = client.beta.chat.completions.parse(
-            # This model is only for debug. It will be changed to a more powerful model
             # model = "gpt-4o-mini",
             temperature = 0,
             model = "gpt-4o-2024-08-06",
@@ -141,7 +144,7 @@ def process_router_date_llm(router_name):
 
     try:
         completion = client.beta.chat.completions.parse(
-            # This model is only for debug. It will be changed to a more powerful model
+            temperature = 0,
             # model = "gpt-4o-mini",
             model = "gpt-4o-2024-08-06",
             messages=[
@@ -161,8 +164,56 @@ def process_router_date_llm(router_name):
         parsed_router_date_llm = output.model_dump(mode="yaml")
         print("parsed_router_date_llm: ", parsed_router_date_llm)
 
-        # Extract units
         return parsed_router_date_llm
+    
+    except Exception as e:
+        print("Error: ", e)
+        pass
+
+
+def process_router_type_llm(router_name):
+    """
+    Use the OpenAI API to help us extract the type information.
+    
+    Parameters:
+        router_name:    The router name
+    """
+    
+    prompt_file = "process_router_type_prompt.txt"
+    components = load_prompt_components(prompt_file, router_name)
+    
+    # Define the system_prompt
+    system_prompt = "\n".join([
+        components["PERSONA"],
+        components["HIGH_LEVEL_TASK"],
+        components["LOW_LEVEL_TASK"]
+    ])
+
+    client = OpenAI()
+
+    try:
+        completion = client.beta.chat.completions.parse(
+            temperature = 0,
+            # model = "gpt-4o-mini",
+            model = "gpt-4o-2024-08-06",
+            messages=[
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": "Let's find the date mentioned in the prompt."
+                }
+            ],
+            response_format=RouterType,
+        )
+
+        output = completion.choices[0].message.parsed
+        parsed_router_type_llm = output.model_dump(mode="yaml")
+        print("parsed_router_type_llm: ", parsed_router_type_llm)
+
+        return parsed_router_type_llm
     
     except Exception as e:
         print("Error: ", e)
@@ -175,27 +226,36 @@ if __name__ == "__main__":
     routers_without_url = "../result/routers_without_url.csv"
 
     router_names = [name for name in os.listdir(result_directory) if os.path.isdir(os.path.join(result_directory, name))]
-    # random.seed(42)
-    # random_selection = random.sample(router_names, 5)
-    testing_router_names = ["8201-32FH", "Catalyst 9300-48UXM", "Nexus 93108TC-EX"]
+    random.seed(42)
+    random_selection = random.sample(router_names, 10)
+    # testing_router_names = ["8201-32FH", "Catalyst 9300-48UXM", "Nexus 93108TC-EX", "NCS 55A1-24H", "N540-28Z4C-SYS-D"]
 
     # for router_name in tqdm(random_selection):
-    for router_name in tqdm(testing_router_names):
+    for router_name in tqdm(random_selection):
         # This router contains the URL
         if not is_model_without_url(router_name, routers_without_url):
-            print("===================================================================================================")
+            print("=======================================================================================================================")
             print("router name: ", router_name)
             filtered_netbox_file = result_directory + router_name + "/" + router_name + "_filtered_netbox.yaml"
             url = load_yaml(filtered_netbox_file)["datasheet_url"]
-            parsed_router_url_llm = process_datasheet_url_llm(router_name, url)
+            parsed_router_url_llm = process_datasheet_with_url_llm(router_name, url)
 
             # Write the info parsed by LLM to a yaml file and store it in the same directory of its associated filtered_network.yaml
             router_result_dirctory = result_directory + router_name + "/"
             router_url_llm_file = router_name + "_url_llm.yaml"
             save_yaml(parsed_router_url_llm, router_result_dirctory+router_url_llm_file)
         
-            # Write the date into the yaml
-            # router_result_dirctory = result_directory + router_name + "/"
-            # router_date_llm_file = router_name + "_date_llm.yaml"
-            # parsed_router_date_llm = process_router_date_llm(router_name)
-            # save_yaml(parsed_router_date_llm, router_result_dirctory+router_date_llm_file)
+        else:
+            # TODO: use llm to directly extract the information (it will be very helpful for those routers without the url)
+        
+        # # Write the date into the yaml
+        # router_result_dirctory = result_directory + router_name + "/"
+        # router_date_llm_file = router_name + "_date_llm.yaml"
+        # parsed_router_date_llm = process_router_date_llm(router_name)
+        # save_yaml(parsed_router_date_llm, router_result_dirctory+router_date_llm_file)
+
+        # # Write the router type into the yaml
+        # router_result_dirctory = result_directory + router_name + "/"
+        # router_type_llm_file = router_name + "_type_llm.yaml"
+        # parsed_router_type_llm = process_router_type_llm(router_name)
+        # save_yaml(parsed_router_type_llm, router_result_dirctory+router_type_llm_file)
