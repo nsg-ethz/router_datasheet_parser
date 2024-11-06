@@ -45,7 +45,6 @@ def filter_netbox_info(psu_category, content, routers_without_url):
     output_dict = {}
     output_dict["manufacturer"] = content.get("manufacturer", output_dict.get("manufacturer"))
     output_dict["model"] = content.get("model", output_dict.get("model"))
-    print("model: ", output_dict["model"])
     output_dict["slug"] = content.get("slug", output_dict.get("slug"))
     output_dict["part_number"] = content.get("part_number", output_dict.get("part_number"))
     output_dict["u_height"] = content.get("u_height", output_dict.get("u_height"))

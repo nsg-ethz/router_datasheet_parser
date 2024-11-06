@@ -57,6 +57,10 @@ class RouterType(BaseModel):
     router_type: Optional[ValueReference] = Field(description="The category of the router, such as 'edge', 'core', 'distribution', among others.")
 
 
+class RouterURL(BaseModel):
+    router_url: Optional[str] = Field(description="The official URL for the router, providing detailed product information and specifications.")
+
+
 def is_model_without_url(model, routers_without_url_csv):
     df = pd.read_csv(routers_without_url_csv)
     return model in df["model"].values
@@ -70,7 +74,6 @@ def process_datasheet_with_url_llm(router_name, url):
         router_name:    The router name
         url:            The URL of this model
     """
-    print("url : ", url)
     prompt_file = "process_datasheet_with_url_prompt.txt"
     components = load_prompt_components(prompt_file, router_name)
     
@@ -111,7 +114,6 @@ def process_datasheet_with_url_llm(router_name, url):
         )
 
         output = completion.choices[0].message.parsed
-        print("output: \n", output)
         parsed_router_url_llm = output.model_dump(mode="yaml")
 
         # Extract units
@@ -120,6 +122,32 @@ def process_datasheet_with_url_llm(router_name, url):
     except Exception as e:
         print("Error: ", e)
         pass
+
+
+def find_router_url(router_name, manufacturer=None):
+
+    client = OpenAI()
+    system_prompt = f"Given the router model '{router_name}' from the manufacturer '{manufacturer}', please return the official URL for this specific model."
+
+    completion = client.beta.chat.completions.parse(
+            temperature = 0,
+            model = "gpt-4o-2024-08-06",
+            messages=[
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": "Let's find the date mentioned in the prompt."
+                }
+            ],
+            response_format=RouterURL,
+        )
+
+    output_url = completion.choices[0].message.parsed.router_url
+    
+    return output_url
 
 
 def process_datasheet_without_url_llm(router_name):
@@ -135,7 +163,6 @@ def process_datasheet_without_url_llm(router_name):
     ])
 
     client = OpenAI()
-
 
     # Call the OpenAI API
     try:
@@ -157,7 +184,6 @@ def process_datasheet_without_url_llm(router_name):
         )
 
         output = completion.choices[0].message.parsed
-        print("output: \n", output)
         parsed_router_url_llm = output.model_dump(mode="yaml")
 
         # Extract units
@@ -281,27 +307,39 @@ if __name__ == "__main__":
         print("==================================================================================================")
         print("router name: ", router_name)
         filtered_netbox_file = result_directory + router_name + "/" + router_name + "_filtered_netbox.yaml"
+        filtered_netbox_file_content = load_yaml(filtered_netbox_file)
         # This router contains the URL
         if not is_model_without_url(router_name, routers_without_url):
-            url = load_yaml(filtered_netbox_file)["datasheet_url"]
+            url = filtered_netbox_file_content["datasheet_url"]
             parsed_router_info_llm = process_datasheet_with_url_llm(router_name, url)
-        
+        # This router DOES NOT contain the URL
         else:
-            parsed_router_info_llm = process_datasheet_without_url_llm(router_name)
+            manufacturer = filtered_netbox_file_content["manufacturer"]
+            url = find_router_url(router_name, manufacturer)
+            # If the url can be found
+            if url:
+                # Add it to the <router_name_filtered_netbox.yaml>
+                data = {"datasheet_url": url}
+                filtered_netbox_file_content.update(data)
+                save_yaml(filtered_netbox_file_content, filtered_netbox_file)
+                parsed_router_info_llm = process_datasheet_with_url_llm(router_name, url)
+            else:
+                parsed_router_info_llm = process_datasheet_without_url_llm(router_name)
+        print("parsed_router_info_llm: ", parsed_router_info_llm)
         
         # Write the info parsed by LLM to a yaml file and store it in the same directory of its associated filtered_network.yaml
         router_result_dirctory = result_directory + router_name + "/"
         router_general_llm_file = router_name + "_general_llm.yaml"
         save_yaml(parsed_router_info_llm, router_result_dirctory+router_general_llm_file)
         
-        # # Write the date into the yaml
-        # router_result_dirctory = result_directory + router_name + "/"
-        # router_date_llm_file = router_name + "_date_llm.yaml"
-        # parsed_router_date_llm = process_router_date_llm(router_name)
-        # save_yaml(parsed_router_date_llm, router_result_dirctory+router_date_llm_file)
+        # Write the date into the yaml
+        router_result_dirctory = result_directory + router_name + "/"
+        router_date_llm_file = router_name + "_date_llm.yaml"
+        parsed_router_date_llm = process_router_date_llm(router_name)
+        save_yaml(parsed_router_date_llm, router_result_dirctory+router_date_llm_file)
 
-        # # Write the router type into the yaml
-        # router_result_dirctory = result_directory + router_name + "/"
-        # router_type_llm_file = router_name + "_type_llm.yaml"
-        # parsed_router_type_llm = process_router_type_llm(router_name)
-        # save_yaml(parsed_router_type_llm, router_result_dirctory+router_type_llm_file)
+        # Write the router type into the yaml
+        router_result_dirctory = result_directory + router_name + "/"
+        router_type_llm_file = router_name + "_type_llm.yaml"
+        parsed_router_type_llm = process_router_type_llm(router_name)
+        save_yaml(parsed_router_type_llm, router_result_dirctory+router_type_llm_file)
