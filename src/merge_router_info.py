@@ -1,4 +1,3 @@
-import os
 from tqdm import tqdm
 from collections import OrderedDict
 from load_file import *

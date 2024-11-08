@@ -2,6 +2,7 @@ import os
 import requests
 import random
 import pandas as pd
+from openai import OpenAI
 from typing import Literal, Optional
 from markdownify import markdownify as md
 from pydantic import BaseModel, Field
@@ -123,6 +124,32 @@ def process_datasheet_with_url_llm(router_name, url):
     except Exception as e:
         print("Error: ", e)
         pass
+
+
+def find_router_url(router_name, manufacturer=None):
+
+    client = OpenAI()
+    system_prompt = f"Given the router model '{router_name}' from the manufacturer '{manufacturer}', please return the official URL for this specific model."
+
+    completion = client.beta.chat.completions.parse(
+            temperature = 0,
+            model = "gpt-4o-2024-08-06",
+            messages=[
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": "Let's find the date mentioned in the prompt."
+                }
+            ],
+            response_format=RouterURL,
+        )
+
+    output_url = completion.choices[0].message.parsed.router_url
+    
+    return output_url
 
 
 def process_datasheet_without_url_llm(router_name):

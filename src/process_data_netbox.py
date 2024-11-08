@@ -1,7 +1,7 @@
+import os
 import json
 import re
 import requests
-import random
 from bs4 import BeautifulSoup
 from openai import OpenAI
 from typing import Optional
@@ -11,7 +11,15 @@ from merge_router_info import *
 
 
 def extract_supported_products_series(url):
+    """
+    Extract the Cisco routers and switches series information.
 
+    Parameters:
+        url:    The URL of the Cisco routers/switches series.
+    
+    Returns:
+        A dict data-type variable with the key of series name, and the value of series webpage.
+    """
     html_content = requests.get(url).text
     soup = BeautifulSoup(html_content, 'html.parser')
     all_supported_products = soup.find('div', {'id': 'allSupportedProducts'})
@@ -40,14 +48,25 @@ class RouterSeries(BaseModel):
     router_series: Optional[str] = Field(description="The router series which this router model belong to.")
 
 
-def find_router_series(router_category_clarification_file_path, router_name, manufacturer=None):
+def find_router_series(cisco_router_switch_series_file_path, router_name, manufacturer=None):
+    """
+    Find the corresponding router series with the help of LLM.
 
+    Parameters:
+        cisco_router_switch_series_file_path:   The file path indicating the Cisco router/switch series information.
+        router_name:                            The name of the router.
+        manufacturer:                           The manufacturer of a router, e.g., Cisco.
+
+    Returns:
+        The series of the router.                            
+    """
     client = OpenAI()
     system_prompt = f"Given the router model '{router_name}', its associated manufacturer '{manufacturer}' and the 'router_switch_series.json' file\
                     please return the router series for this specific model. \
                     For example, router 'Catalyst 3650-48FQM-L' belongs to the series 'Catalyst 3650 Series Switches'"
 
-    router_category_clarification = load_json(router_category_clarification_file_path)
+    cisco_router_switch_series = load_json(cisco_router_switch_series_file_path)
+    cisco_router_switch_series_str = json.dumps(cisco_router_switch_series)
 
     completion = client.beta.chat.completions.parse(
         temperature = 0,
@@ -59,7 +78,7 @@ def find_router_series(router_category_clarification_file_path, router_name, man
             },
             {
                 "role": "user",
-                "content": router_category_clarification
+                "content": cisco_router_switch_series_str
             }
         ],
         response_format=RouterSeries,
@@ -92,9 +111,8 @@ def filter_netbox_info(psu_category, content, routers_without_url):
         router_dir:     A router dictory storing all the netbox router info
     
     Returns:
-        yaml:           A yaml file with the name format 
-                        <router_model>_filtered_netbox.yaml
-                        containing the information mentioned above.
+        A yaml file with the name format <router_model>_filtered_netbox.yaml
+        containing the information mentioned above.
     """
     # Load .json for the psu category
     with open(psu_category, "r") as json_file:
@@ -145,7 +163,7 @@ def filter_netbox_info(psu_category, content, routers_without_url):
 
 if __name__ == "__main__":
 
-    router_dir = "../dataset/Cisco/"
+    dataset_dir = "../dataset/Cisco/"
 
     # Generate the 'router_switch_series.json' file
     cisco_router_url = "https://www.cisco.com/c/en/us/support/routers/index.html"
@@ -156,7 +174,7 @@ if __name__ == "__main__":
     cisco_router_switch_series_file_path = "../category_and_clarification/router_switch_series.json"
     save_json(merged_data, cisco_router_switch_series_file_path)
 
-    psu_category = "psu_category.json" # This file is manually created
+    psu_category = "../category_and_clarification/psu_category.json" # This file is manually created
     os.makedirs("../result/", exist_ok=True)
     routers_without_url = "../result/routers_without_url.csv"
 
@@ -166,27 +184,26 @@ if __name__ == "__main__":
         os.remove(routers_without_url)
     record_without_url_csv(routers_without_url, "manufacturer", "model", write_header=True)
 
-    files = sorted([f for f in os.listdir(router_dir) if os.path.isfile(os.path.join(router_dir, f))])
-    random.seed(42)
-    random_selection = random.sample(files, 10)
+    files = sorted([f for f in os.listdir(dataset_dir) if os.path.isfile(os.path.join(dataset_dir, f))])
 
-    for filename in tqdm(random_selection):
+    for filename in tqdm(files):
         print("filename: ", filename)
-        content = load_yaml(os.path.join(router_dir, filename))
+        content = load_yaml(os.path.join(dataset_dir, filename))
         router_name = content["model"]
         manufacturer = content["manufacturer"]
         
         router_series = find_router_series(cisco_router_switch_series_file_path, router_name, manufacturer)
         print("router_series: ", router_series)
-        # result_series_dir = "../result/" + str(manufacturer) + "/" + str(router_series)
-        # os.makedirs(result_series_dir, exist_ok=True)
-        # print("result_series_dir: ", result_series_dir)
+        router_series_str = str(router_series).lower().replace("-", "_").replace(" ", "_").strip()
+        print("router_series_str: ", router_series_str)
+        result_series_dir = "../result/" + str(manufacturer).lower() + "/" + str(router_series_str)
+        os.makedirs(result_series_dir, exist_ok=True)
         
-        # filtered_content = filter_netbox_info(psu_category, content, routers_without_url)
-        # filtered_content["series"] = router_series
-        # filter_netbox_yaml_file = "filtered_netbox.yaml"
+        filtered_content = filter_netbox_info(psu_category, content, routers_without_url)
+        filtered_content["series"] = str(router_series)
+        filter_netbox_yaml_file = "filtered_netbox.yaml"
 
-        # # Save the result into the appointed folder
-        # result_router_dir = result_series_dir + "/" + str(router_name).lower().replace("-", "_").replace(" ", "_").strip()
-        # os.makedirs(result_router_dir, exist_ok=True)
-        # save_yaml(filtered_content, result_router_dir + "/" + filter_netbox_yaml_file)
+        # Save the result into the appointed folder
+        result_router_dir = result_series_dir + "/" + str(router_name).lower().replace("-", "_").replace(" ", "_").strip()
+        os.makedirs(result_router_dir, exist_ok=True)
+        save_yaml(filtered_content, result_router_dir + "/" + filter_netbox_yaml_file)
