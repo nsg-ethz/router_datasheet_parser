@@ -1,8 +1,73 @@
 import json
 import re
-import os
-from tqdm import tqdm
+import requests
+import random
+from bs4 import BeautifulSoup
+from openai import OpenAI
+from typing import Optional
+from pydantic import BaseModel, Field
 from load_file import *
+from merge_router_info import *
+
+
+def extract_supported_products_series(url):
+
+    html_content = requests.get(url).text
+    soup = BeautifulSoup(html_content, 'html.parser')
+    all_supported_products = soup.find('div', {'id': 'allSupportedProducts'})
+    routers_data = {}
+
+    # Find all router number sections (0-9 and specific models under it)
+    for item in all_supported_products.find_all('li'):
+        number_tag = item.find('span', class_='number')
+        if number_tag:
+            number = number_tag.text.strip()
+            router_dict = {}
+            
+            # Find all the associated router names and links
+            for data_item in item.find_all('span', class_='data-items'):
+                router_name = data_item.text.strip()
+                link_tag = data_item.find('a', class_='link-url')
+                if link_tag and router_name:
+                    router_dict[router_name] = link_tag['href']
+
+            routers_data[number] = router_dict
+
+    return routers_data
+
+
+class RouterSeries(BaseModel):
+    router_series: Optional[str] = Field(description="The router series which this router model belong to.")
+
+
+def find_router_series(router_category_clarification_file_path, router_name, manufacturer=None):
+
+    client = OpenAI()
+    system_prompt = f"Given the router model '{router_name}', its associated manufacturer '{manufacturer}' and the 'router_switch_series.json' file\
+                    please return the router series for this specific model. \
+                    For example, router 'Catalyst 3650-48FQM-L' belongs to the series 'Catalyst 3650 Series Switches'"
+
+    router_category_clarification = load_json(router_category_clarification_file_path)
+
+    completion = client.beta.chat.completions.parse(
+        temperature = 0,
+        model = "gpt-4o",
+        messages=[
+            {
+                "role": "system",
+                "content": system_prompt
+            },
+            {
+                "role": "user",
+                "content": router_category_clarification
+            }
+        ],
+        response_format=RouterSeries,
+    )
+
+    output_series = completion.choices[0].message.parsed.router_series
+
+    return output_series
 
 
 def filter_netbox_info(psu_category, content, routers_without_url):
@@ -36,11 +101,6 @@ def filter_netbox_info(psu_category, content, routers_without_url):
         data = json.load(json_file)
         psu_list = data["psu"]
 
-    # Create a folder for a specific router
-    output_dir = "../result/" + str(content["manufacturer"]) + "/" + str(content["model"]) + "/"
-    filter_netbox_yaml_file = str(content["model"]) + "_filtered_netbox.yaml"
-    os.makedirs(output_dir, exist_ok=True)
-
     # Get prepared for writing this router info
     output_dict = {}
     output_dict["manufacturer"] = content.get("manufacturer", output_dict.get("manufacturer"))
@@ -51,10 +111,10 @@ def filter_netbox_info(psu_category, content, routers_without_url):
 
     # Log the model name in the CSV if "url is missing"
     url = content.get("comments")
-    url_pattern = re.compile(r'https?://[^\s]+')
+    url_pattern = re.compile(r'https?://[^\s\)]+')
     url_match = url_pattern.search(str(url))
     if url_match:
-        url = url_match.group()[:-1]
+        url = url_match.group()
         output_dict["datasheet_url"] = url
     else:
         output_dict["datasheet_url"] = None
@@ -80,23 +140,53 @@ def filter_netbox_info(psu_category, content, routers_without_url):
             # Exit after processing "power-ports" if found
             break
     
-    # Write the output_dict to the yaml
-    save_yaml(output_dict, output_dir+filter_netbox_yaml_file)
+    return output_dict
 
 
 if __name__ == "__main__":
 
     router_dir = "../dataset/Cisco/"
-    psu_category = "psu_category.json"
+
+    # Generate the 'router_switch_series.json' file
+    cisco_router_url = "https://www.cisco.com/c/en/us/support/routers/index.html"
+    cisco_switch_url = "https://www.cisco.com/c/en/us/support/switches/index.html"
+    cisco_routers_data = extract_supported_products_series(cisco_router_url)
+    cisco_switches_data = extract_supported_products_series(cisco_switch_url)
+    merged_data = merge_dicts(cisco_routers_data, cisco_switches_data)
+    cisco_router_switch_series_file_path = "../category_and_clarification/router_switch_series.json"
+    save_json(merged_data, cisco_router_switch_series_file_path)
+
+    psu_category = "psu_category.json" # This file is manually created
+    os.makedirs("../result/", exist_ok=True)
     routers_without_url = "../result/routers_without_url.csv"
 
     # Delete the file if it already exists to ensure a fresh start
+    # And write header to create new CSV file with header at the begining
     if os.path.exists(routers_without_url):
         os.remove(routers_without_url)
-    # Write header to create new CSV file with header at the begining
     record_without_url_csv(routers_without_url, "manufacturer", "model", write_header=True)
 
     files = sorted([f for f in os.listdir(router_dir) if os.path.isfile(os.path.join(router_dir, f))])
-    for filename in tqdm(files):
+    random.seed(42)
+    random_selection = random.sample(files, 10)
+
+    for filename in tqdm(random_selection):
+        print("filename: ", filename)
         content = load_yaml(os.path.join(router_dir, filename))
-        filter_netbox_info(psu_category, content, routers_without_url)
+        router_name = content["model"]
+        manufacturer = content["manufacturer"]
+        
+        router_series = find_router_series(cisco_router_switch_series_file_path, router_name, manufacturer)
+        print("router_series: ", router_series)
+        # result_series_dir = "../result/" + str(manufacturer) + "/" + str(router_series)
+        # os.makedirs(result_series_dir, exist_ok=True)
+        # print("result_series_dir: ", result_series_dir)
+        
+        # filtered_content = filter_netbox_info(psu_category, content, routers_without_url)
+        # filtered_content["series"] = router_series
+        # filter_netbox_yaml_file = "filtered_netbox.yaml"
+
+        # # Save the result into the appointed folder
+        # result_router_dir = result_series_dir + "/" + str(router_name).lower().replace("-", "_").replace(" ", "_").strip()
+        # os.makedirs(result_router_dir, exist_ok=True)
+        # save_yaml(filtered_content, result_router_dir + "/" + filter_netbox_yaml_file)

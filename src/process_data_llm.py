@@ -4,7 +4,6 @@ import random
 import pandas as pd
 from typing import Literal, Optional
 from markdownify import markdownify as md
-from openai import OpenAI
 from pydantic import BaseModel, Field
 from tqdm import tqdm
 from load_file import *
@@ -33,6 +32,7 @@ class PSU(BaseModel):
 
 # The overall infomation of a router
 class RouterInfo(BaseModel):
+    series: str = Field(description="The series which this router model belong to.")
     datasheet_pdf: str = Field(description="The pdf file storing the information on this router device.")
     max_throughput: Optional[Throughput] = Field(description="The maximum throughput or the bandwidth used in the url, usually in the unit of Tbps or Gbps")
     typical_power_draw: Optional[Power] = Field(description="This is the usual amount of power comsumed by the device under normal operating conditions. It reflects the average power usage when the device is functioning with a typical load")
@@ -94,12 +94,13 @@ def process_datasheet_with_url_llm(router_name, url):
     with open(f"../result/markdown/{router_name}.md", "w") as f:
         f.write(markdown_content)
 
+    print("markdown_content: ", type(markdown_content))
     # Call the OpenAI API
     try:
         completion = client.beta.chat.completions.parse(
             # model = "gpt-4o-mini",
             temperature = 0,
-            model = "gpt-4o-2024-08-06",
+            model = "gpt-4o",
             messages=[
                 {
                     "role": "system",
@@ -124,32 +125,6 @@ def process_datasheet_with_url_llm(router_name, url):
         pass
 
 
-def find_router_url(router_name, manufacturer=None):
-
-    client = OpenAI()
-    system_prompt = f"Given the router model '{router_name}' from the manufacturer '{manufacturer}', please return the official URL for this specific model."
-
-    completion = client.beta.chat.completions.parse(
-            temperature = 0,
-            model = "gpt-4o-2024-08-06",
-            messages=[
-                {
-                    "role": "system",
-                    "content": system_prompt
-                },
-                {
-                    "role": "user",
-                    "content": "Let's find the date mentioned in the prompt."
-                }
-            ],
-            response_format=RouterURL,
-        )
-
-    output_url = completion.choices[0].message.parsed.router_url
-    
-    return output_url
-
-
 def process_datasheet_without_url_llm(router_name):
 
     prompt_file = "process_datasheet_without_url_prompt.txt"
@@ -167,7 +142,6 @@ def process_datasheet_without_url_llm(router_name):
     # Call the OpenAI API
     try:
         completion = client.beta.chat.completions.parse(
-            # model = "gpt-4o-mini",
             temperature = 0,
             model = "gpt-4o-2024-08-06",
             messages=[
@@ -201,11 +175,10 @@ def process_router_date_llm(router_name):
     Parameters:
         router_name:    The router name
     """
-    
+
     prompt_file = "process_router_date_prompt.txt"
     components = load_prompt_components(prompt_file, router_name)
-    
-    # Define the system_prompt
+
     system_prompt = "\n".join([
         components["PERSONA"],
         components["HIGH_LEVEL_TASK"],
@@ -217,7 +190,6 @@ def process_router_date_llm(router_name):
     try:
         completion = client.beta.chat.completions.parse(
             temperature = 0,
-            # model = "gpt-4o-mini",
             model = "gpt-4o-2024-08-06",
             messages=[
                 {
@@ -226,7 +198,7 @@ def process_router_date_llm(router_name):
                 },
                 {
                     "role": "user",
-                    "content": "Let's find the date mentioned in the prompt."
+                    "content": "Let's find the date mentioned based on the prompt."
                 }
             ],
             response_format=RouterDate,
@@ -299,18 +271,18 @@ if __name__ == "__main__":
 
     router_names = [name for name in os.listdir(result_directory) if os.path.isdir(os.path.join(result_directory, name))]
     random.seed(42)
-    random_selection = random.sample(router_names, 10)
-    # testing_router_names = ["8201-32FH", "Catalyst 9300-48UXM", "Nexus 93108TC-EX", "NCS 55A1-24H", "N540-28Z4C-SYS-D"]
+    random_selection = random.sample(router_names, 3)
 
     # for router_name in tqdm(random_selection):
     for router_name in tqdm(random_selection):
-        print("==================================================================================================")
-        print("router name: ", router_name)
+        print("\n===================================================================================================================")
+        print("\n", router_name, "\n")
         filtered_netbox_file = result_directory + router_name + "/" + router_name + "_filtered_netbox.yaml"
         filtered_netbox_file_content = load_yaml(filtered_netbox_file)
         # This router contains the URL
         if not is_model_without_url(router_name, routers_without_url):
             url = filtered_netbox_file_content["datasheet_url"]
+            print("Category 1 -> There is a URL in the netbox yaml -> ", url)
             parsed_router_info_llm = process_datasheet_with_url_llm(router_name, url)
         # This router DOES NOT contain the URL
         else:
@@ -318,12 +290,13 @@ if __name__ == "__main__":
             url = find_router_url(router_name, manufacturer)
             # If the url can be found
             if url:
-                # Add it to the <router_name_filtered_netbox.yaml>
+                print("Category 2 -> The URL is found via LLM ->", url)
                 data = {"datasheet_url": url}
                 filtered_netbox_file_content.update(data)
                 save_yaml(filtered_netbox_file_content, filtered_netbox_file)
                 parsed_router_info_llm = process_datasheet_with_url_llm(router_name, url)
             else:
+                print("Category 3 -> No URL can be found")
                 parsed_router_info_llm = process_datasheet_without_url_llm(router_name)
         print("parsed_router_info_llm: ", parsed_router_info_llm)
         

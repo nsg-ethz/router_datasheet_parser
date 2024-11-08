@@ -1,0 +1,23 @@
+{
+    "access": {
+        "explanation": "Connects end-user devices to the network and is typically deployed at the network's edge."
+    },
+    "edge": {
+        "explanation": "Sits at the boundary between internal and external networks, managing data flow in and out."
+    },
+    "core": {
+        "explanation": "Provides high-speed forwarding within a network backbone, ensuring data moves efficiently across long distances."
+    },
+    "enterprise": {
+        "explanation": "Deployed in large organizations, it supports complex network infrastructures and manages high data traffic."
+    },
+    "data_center": {
+        "explanation": "Specialized for data centers, optimized for high performance and scalability in handling substantial data traffic."
+    },
+    "aggregation": {
+        "explanation": "Consolidates traffic from multiple sources or networks, commonly used in service provider networks."
+    },
+    "virtual": {
+        "explanation": "Operates as software, offering routing services without physical hardware, typically in virtualized network environments."
+    }
+}

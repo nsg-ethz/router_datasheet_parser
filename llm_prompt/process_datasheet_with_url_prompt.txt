@@ -17,20 +17,38 @@ Here are some key points which you may pay attention to:
     While some information may apply to all routers in the series, specific details should be verified to ensure relevance to the target model. 
     For instance, the datasheet for router 8201-32FH also contains information on Cisco 8201-SYS.
     Your goal is to exclude details related to Cisco 8201-SYS or other models, focusing solely on the designated router, e.g., 8202-32FH. Specifically, 415W is the typical system power for 8201-SYS not for 8201-32FH.
-3.  There is a feature in RouterInfo called 'is_poe_capable', it is a boolen value judging if this router is Power over Ethernet (PoE) capable. If it is not PoE capable, then you can skip the step of extracting the info about the max_poe_draw.
+3.  The is_poe_capable feature in RouterInfo is a boolean value that indicates whether the router supports Power over Ethernet (PoE). If the rotuer is not PoE-capable, you can skip extracting information about max_poe_draw. 
+    However, if is_poe_capable is True, then max_poe_draw must contain a valid numerical value. Please ensure that max_poe_draw is never left as None in cases where is_poe_capable is True.
 4.  Please pay attention to the differences among typical_power_draw, max_power_draw and max_poe_draw.
     typical_power_draw: The usual amount of power a device usually consumes under normal operating conditions.
     max_power_draw: The maximum power a device can consume when operating at full capacity or under peak load conditions.
     max_poe_draw: The highest power a device can draw specifically over a PoE connection. PoE is also connected with Power Sourcing Equipment (PSE). PSE refers to devices, such as switches or injectors, that supply power over Ethernet.
-    Besides, for the typical/max_power_draw, the typical_power_draw is typically smaller than the max_power_draw in theory.
-    Please refer to the following examples.
+    Besides, for the typical/max_power_draw, the typical_power_draw is smaller than the max_power_draw in theory. 
+    Please refer to the following examples:
     'Cisco Catalyst 9115AXI-E': The max PoE Power Consumption is 20.4W. And no typical/max_power_draw can be found. Thus, you can fill in the max_poe_draw 20.4W and leave typical/max_power_draw blank. Besides, Cisco Catalyst 9115AXI-E is also a good example for bullet point 2. You can find two values, 20.4W and 21.4W, under the Max Poe Power Consumption colume. Please close attention to router name, which is 9115AXI-E. 20.4W is for Cisco Catalyst 9115AXI and 21.4W is actually for Cisco Catalyst 9115AXE. 9115AXI-E belongs to 9115AXI rather than 9115AXE. Thus, 20.4W should be chosen.
     'Cisco C9300-48UXM': The typical_power_draw is 258W, found under the column 'Weighted average Pw' in the row 'C9300-48UXM'. The max_power_draw is 277.2W, listed under the column '100% Full port traffic' in the same row. While max_power_draw isn’t explicitly labeled, '100% Full port traffic' reasonably represents max_power_draw based on common industry knowledge. You can find two numbers for the max_poe_draw: One is 1290W and another is 490W under the column 'Available PoE' You can also find that 1290W belongs to the Upgrade and 490W belongs to the default. So, in the output, you can put 1290 for the max_power_draw in the value and write in the description that 1290W is for the upgrade PoE and the 490W is for the default PoE.
     'Catalyst 1000-8FP-E-2G-L': typical_power_draw shall be 14.12W because the weighted avarage makes more sense to typical. The max_power_draw shall be 16.68W rather than 15.88W because it reflects more on the 100% traffic.
-5.  The power_rating is defined as 'How much power a PSU can deliver'. Its unit is usually in watts, and it is the feature related to the PSU rather than router.
+5.  As a supplement to typical_power_draw and max_poe_draw, the term 'weighted average' generally corresponds to typical_power_draw, while '100% Traffic' is commly used to indicate max_power_draw.
+    'Catalyst 3650-48FQM-L': 88.4 W for typical_power_draw and 95.8 for max_power_draw which can be found in Table 12.
+6.  The power_rating is defined as 'How much power a PSU can deliver'. Its unit is usually in watts, and it is the feature related to the PSU rather than router.
     If there are multiple values related to it, then put the maximum value to it and describe it specifically in the description for the rest.
     For example, 1900W is the power_rating for router C9300-48UXM, but 1100W can also be found online as default version of the power supply.
-6.  number_of_modules refers to the quantity of PSUs (Power Supply Units) a router contains. This information may not always be explicitly stated on the webpage.
-    For example, in Table 4 of the C9300-48UXM webpage, the 'Power Supply Models' section lists a “Primary Power Supply” along with four optional 'Secondary PS' units. Therefore, the number_of_modules should be recorded as 2. 
+7.  For the PSUs (Power Supply Units) module, please gather all available PSU-related details, even if they are labeled differently. For example 'power source', 'power supply', 'power module' should also be considered as PSU.
+    number_of_modules inside the psu refers to the quantity of PSUs (Power Supply Units) a router contains. This information may not always be explicitly stated on the webpage.
+    For example, in Table 4 of the C9300-48UXM webpage, the 'Power Supply Models' section lists a 'Primary Power Supply' along with four optional 'Secondary PS' units. Therefore, the number_of_modules should be recorded as 2. 
     Conversely, for the N540-28Z4C-SYS-D model, while Table 5 mentions 'Power Supplies', no specific PSU information is provided. In such cases, you may leave number_of_modules empty.
-7.  For the PDF file, please provide the full URL, which typically begins with 'http' and ends with '.com' or '.html' or '.pdf'.
+8.  For the PDF file, please provide the full URL, which typically begins with 'http' and ends with '.com' or '.html' or '.pdf'.
+9.  Sometimes, the term throughput may not appear directly; in such cases, consider using the 'switching capacity' as a reference and piecing together other relevant information.
+    For example, for the router 'Catalyst 3650-48FQM-L', the max_throughput is 392 Gpbs. Here's how you can determine this:
+    First, locate 'WS-C3650-48FQM-L', which corresponds to the router 'Catalyst 3650-48FQM-L'. The description for this model includes: 'Standalone with Optional Stacking 48 10/100/1000 Ethernet PoE+ and 4x10G Uplink ports, with fixed 975WAC power supply, 1 RU, LAN Base feature set'.
+    Next, refer to the 'Switching capacity' section, where you find capacities listed as follows:
+    '176 Gbps on 48-port models (non-multigigabit models)
+    92 Gbps on 24-port models (non-multigigabit models)
+    254 Gbps on 24-port Multigigabit models with 2x10G uplink
+    272 Gbps on 24-port Multigigabit models with 4x10G uplink
+    392 Gbps on 48-port Multigigabit models with 4x10G uplink
+    472 Gbps on 48-port Multigigabit models with 8x10G uplink
+    472 Gbps on 48-port Multigigabit models with 2x40G uplink'
+    Since 'WS-C3650-48FQM-L' has 4x10G Uplink ports, its max_throughput is determined to be 392 Gbps.
+10. Here is the supplement on psu. Information on the power supply unit (PSU) may not always be explicitly listed in the datasheet. In such cases, use other available data points to deduce PSU details.
+    For example, for the router 'Catalyst 2960X-48FPS-L', locate its entry in the datasheet. You’ll find that 'Catalyst 2960X-48FPS-L' are described as including a field-replaceable modular power supply, with support for a second supply. This implies that the number_of_modules should be set to 2. Additionally, statements like 'Dual redundant power supplies are supported' and Table 2 information reveal that this model provides 740W of available PoE. Based on Table 3, you can determine that the part_number is PWR-C2-1025WAC and the power_rating is 1025 W.

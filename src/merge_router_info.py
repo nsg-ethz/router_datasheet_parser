@@ -28,6 +28,8 @@ def merge_dicts(dict1, dict2):
         else:
             # If key only exists in dict2, add it to dict1
             dict1[key] = value
+    
+    return dict1
 
 
 def organize_dicts(data):
@@ -55,6 +57,8 @@ def organize_dicts(data):
         ("max_throughput", data["max_throughput"]),
         ("max_power_draw", data["max_power_draw"]),
         ("typical_power_draw", data["typical_power_draw"]),
+        ("is_poe_capable", data["is_poe_capable"]),
+        ("max_poe_draw", data["max_poe_draw"]),
         ("psu", data["psu"]),
     ])
 
@@ -97,6 +101,8 @@ if __name__ == "__main__":
             "max_throughput": None,
             "max_power_draw": None,
             "typical_power_draw": None,
+            "is_poe_capable": None,
+            "max_poe_draw": None,
             "psu": None,
         }
         merge_dicts(merged_data, filtered_netbox_data)

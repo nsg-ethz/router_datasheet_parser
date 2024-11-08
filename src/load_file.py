@@ -1,5 +1,6 @@
 import yaml
 import csv
+import json
 import pandas as pd
 
 
@@ -58,6 +59,19 @@ def save_yaml(data, file_path):
     """
     with open(file_path, "w") as f:
         yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+
+
+def load_json(file_path):
+    
+    with open(file_path, "r") as json_file:
+        data = json.load(json_file)
+
+    return data
+
+
+def save_json(data, file_path):
+    with open(file_path, 'w') as json_file:
+        json.dump(data, json_file, indent=4)
 
 
 def load_prompt_components(file_path, router_name):
