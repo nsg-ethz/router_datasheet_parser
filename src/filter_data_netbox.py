@@ -12,10 +12,10 @@ from merge_router_info import *
 
 def extract_supported_products_series(url):
     """
-    Extract the Cisco routers and switches series information.
+    Extract the Cisco routers series information.
 
     Parameters:
-        url:    The URL of the Cisco routers/switches series.
+        url:    The URL of the Cisco routers series.
     
     Returns:
         A dict data-type variable with the key of series name, and the value of series webpage.
@@ -48,25 +48,28 @@ class RouterSeries(BaseModel):
     router_series: Optional[str] = Field(description="The router series which this router model belong to.")
 
 
-def find_router_series(cisco_router_switch_series_file_path, router_name, manufacturer=None):
+def find_router_series(cisco_router_series_file_path, router_name, manufacturer=None):
     """
     Find the corresponding router series with the help of LLM.
 
     Parameters:
-        cisco_router_switch_series_file_path:   The file path indicating the Cisco router/switch series information.
-        router_name:                            The name of the router.
-        manufacturer:                           The manufacturer of a router, e.g., Cisco.
+        cisco_router_series_file_path:   The file path indicating the Cisco router series information.
+        router_name:                     The name of the router.
+        manufacturer:                    The manufacturer of a router, e.g., Cisco.
 
     Returns:
         The series of the router.                            
     """
     client = OpenAI()
-    system_prompt = f"Given the router model '{router_name}', its associated manufacturer '{manufacturer}' and the 'router_switch_series.json' file\
+    system_prompt = f"Given the router model '{router_name}', its associated manufacturer '{manufacturer}' and the '{cisco_router_series_file_path}' file\
                     please return the router series for this specific model. \
+                    It will be perfect if the router series belongs to one of the those in '{cisco_router_series_file_path}'. \
+                    If you can't find the corresponding series in '{cisco_router_series_file_path}', then use your own knowledge to search for the series. \
+                    If you still can't find it, leave it empty. \
                     For example, router 'Catalyst 3650-48FQM-L' belongs to the series 'Catalyst 3650 Series Switches'"
 
-    cisco_router_switch_series = load_json(cisco_router_switch_series_file_path)
-    cisco_router_switch_series_str = json.dumps(cisco_router_switch_series)
+    cisco_router_series = load_json(cisco_router_series_file_path)
+    cisco_router_series_str = json.dumps(cisco_router_series)
 
     completion = client.beta.chat.completions.parse(
         temperature = 0,
@@ -78,7 +81,7 @@ def find_router_series(cisco_router_switch_series_file_path, router_name, manufa
             },
             {
                 "role": "user",
-                "content": cisco_router_switch_series_str
+                "content": cisco_router_series_str
             }
         ],
         response_format=RouterSeries,
@@ -168,11 +171,18 @@ if __name__ == "__main__":
     # Generate the 'router_switch_series.json' file
     cisco_router_url = "https://www.cisco.com/c/en/us/support/routers/index.html"
     cisco_switch_url = "https://www.cisco.com/c/en/us/support/switches/index.html"
+    cisco_wireless_url = "https://www.cisco.com/c/en/us/support/wireless/index.html"
+
     cisco_routers_data = extract_supported_products_series(cisco_router_url)
     cisco_switches_data = extract_supported_products_series(cisco_switch_url)
-    merged_data = merge_dicts(cisco_routers_data, cisco_switches_data)
-    cisco_router_switch_series_file_path = "../category_and_clarification/router_switch_series.json"
-    save_json(merged_data, cisco_router_switch_series_file_path)
+    cisco_wireless_data = extract_supported_products_series(cisco_wireless_url)
+
+    merged_data = {}
+    merged_data = merge_dicts(merged_data, cisco_routers_data)
+    merged_data = merge_dicts(merged_data, cisco_switches_data)
+    merged_data = merge_dicts(merged_data, cisco_wireless_data)
+    cisco_router_series_file_path = "../category_and_clarification/router_switch_series.json"
+    save_json(merged_data, cisco_router_series_file_path)
 
     psu_category = "../category_and_clarification/psu_category.json" # This file is manually created
     os.makedirs("../result/", exist_ok=True)
@@ -192,10 +202,9 @@ if __name__ == "__main__":
         router_name = content["model"]
         manufacturer = content["manufacturer"]
         
-        router_series = find_router_series(cisco_router_switch_series_file_path, router_name, manufacturer)
+        router_series = find_router_series(cisco_router_series_file_path, router_name, manufacturer)
         print("router_series: ", router_series)
         router_series_str = str(router_series).lower().replace("-", "_").replace(" ", "_").strip()
-        print("router_series_str: ", router_series_str)
         result_series_dir = "../result/" + str(manufacturer).lower() + "/" + str(router_series_str)
         os.makedirs(result_series_dir, exist_ok=True)
         
