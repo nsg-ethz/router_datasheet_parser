@@ -1,6 +1,8 @@
 import yaml
 import csv
 import json
+import requests
+import pdfplumber
 import pandas as pd
 
 
@@ -74,7 +76,7 @@ def save_json(data, file_path):
         json.dump(data, json_file, indent=4)
 
 
-def load_prompt_components(file_path, router_name):
+def load_prompt_components(file_path, router_info):
     
     with open(file_path, "r") as file:
         lines = file.readlines()
@@ -91,6 +93,32 @@ def load_prompt_components(file_path, router_name):
             components[current_key] += line + "\n"
     
     # Format the LOW_LEVEL_TASK with the router_name
-    components["LOW_LEVEL_TASK"] = components["LOW_LEVEL_TASK"].format(router_name=router_name)
+    components["LOW_LEVEL_TASK"] = components["LOW_LEVEL_TASK"].format(router_info=router_info)
 
     return components
+
+
+def pdf_to_markdown(url, router_name):
+    # Step 1: Download PDF from the URL
+    response = requests.get(url)
+    pdf_path = "../result/markdown/" + str(router_name) + ".pdf"
+    with open(pdf_path, "wb") as f:
+        f.write(response.content)
+    
+    # Step 2: Extract text from PDF
+    pdf_text = ""
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            pdf_text += page.extract_text() + "\n"
+    
+    # Step 3: Save the text as a Markdown file
+    output_md_file = "../result/markdown/" + str(router_name) + ".md"
+    with open(output_md_file, "w") as md_file:
+        md_file.write("# PDF to Markdown Conversion\n\n")
+        md_file.write(pdf_text)
+
+    # Step 4: Load Markdown content into a variable
+    with open(output_md_file, "r") as md_file:
+        markdown_content = md_file.read()
+
+    return markdown_content

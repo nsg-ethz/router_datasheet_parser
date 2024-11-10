@@ -6,7 +6,10 @@ You task is to gather accurate data information for various routers using your k
 The goal is to search by router model name and identify relevant dates, such as release, end-of-sale, and end-of-support dates.
 
 LOW_LEVEL_TASK
-I will provide the router model name and its series. Your focus is to find date information specific to router {router_name}. Use your expertise to extract this information and fill in the fields provided.
-You may refer to any credible source, such as the product’s official URL or other online resources. If the information is unavailable, leave the field empty. If unsure, also leave the field empty. Ensure that any source you return is valid and accessible (not a 404 error). The referenced page should allow for easy verification, enabling search (Command/Control + F) to locate the date.
-For Cisco routers, please refer to the webpage which starts with https://www.cisco.com/c/en/us/support/switches/. The following part of the url is normally the series.
-For example, router 'Catalyst 3650-48FQM-L' belongs to 'Cisco Catalyst 3650 Series', so the release date, end-of-sale date and end-of-support date of 'Cisco Catalyst 3650 Series Switches' can be found via https://www.cisco.com/c/en/us/support/switches/catalyst-3650-series-switches/series.html.
+I will provide the router series. Your focus is to find date information specific to the series {router_info}. Use your expertise to extract the date information.
+You may refer to any credible source, such as the product’s official URL or other online resources.
+If the information is unavailable, leave the field empty. If unsure, also leave the field empty.
+Ensure that any source you return is valid and accessible. The referenced page should allow for easy verification, enabling search (Command/Control + F) to locate the date.
+Let's take the series 'me_3600x_series_ethernet_access_switches' as an example.
+You can find the relevant official webpage of series 'me_3600x_series_ethernet_access_switches' on https://www.cisco.com/c/en/us/obsolete/switches/cisco-me-3600x-series-ethernet-access-switches.html.
+On this webpage, you can find 'End-of-Sale Date' as 2017-10-15 and the 'End-of-Support Date' as 2022-10-31. The release date is not available. So you can leave it empty.

@@ -6,9 +6,10 @@ You are tasked with gathering the router type information on various routers wit
 Your objective is to search the provided router model name and then find the useful information about the requested type.
 
 LOW_LEVEL_TASK
-I will give you the router manufacturer and model name. You are looking for the date relevant only to router {router_name}
+I will give you the router series. You are looking for the type relevant only to router {router_info}.
 Your task is to use your expertise to try to extract the type information and fill out the fields of the given structure.
-The source can be anything, e.g., the url of this product, the information published online, etc.
+Somehow, I believe the router series name can indicate the type, but it is not definite.
+For example, ME 3600X Series Ethernet Access Switches indicates this series type is 'access'
+The source is the reference you make the judgement of which type of router the given router is. The source can be anything, e.g., the url of this product, the information published online, etc.
 The router type can be anything including but not limited to 'edge', 'core', 'distribution', 'datacenter', 'enterprise', 'access', 'aggregation', 'virtual', 'service', etc.
 If the information is not present, you can leave the field empty. If you are unsure, leave the field empty.
-If you return the source, please make sure that source is valid rather than '404 Page Not Found' and I will be able to open the link.

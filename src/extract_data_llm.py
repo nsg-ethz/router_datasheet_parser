@@ -30,7 +30,6 @@ class PSU(BaseModel):
 
 # The overall infomation of a router
 class RouterInfo(BaseModel):
-    series: str = Field(description="The series which this router model belong to.")
     datasheet_pdf: str = Field(description="The pdf file storing the information on this router device.")
     max_throughput: Optional[Throughput] = Field(description="The maximum throughput or the bandwidth used in the url, usually in the unit of Tbps or Gbps")
     typical_power_draw: Optional[Power] = Field(description="This is the usual amount of power comsumed by the device under normal operating conditions. It reflects the average power usage when the device is functioning with a typical load")
@@ -82,13 +81,15 @@ def extract_datasheet_with_url_llm(router_name, url):
 
     client = OpenAI()
     html_content = requests.get(url).text
-
     # Transfer the HTML to MD to reduce the number of tokens
     # encoding = tiktoken.encoding_for_model("gpt-4o")
-    markdown_content = md(html_content)
     os.makedirs("../result/markdown", exist_ok=True)
-    with open(f"../result/markdown/{router_name}.md", "w") as f:
-        f.write(markdown_content)
+    if "pdf" in url:
+        markdown_content = pdf_to_markdown(url, router_name)
+    else:
+        markdown_content = md(html_content)
+        with open(f"../result/markdown/{router_name}.md", "w") as f:
+            f.write(markdown_content)
 
     # Call the OpenAI API
     try:
@@ -120,26 +121,24 @@ def extract_datasheet_with_url_llm(router_name, url):
         pass
 
 
-def find_router_url_llm(router_name, manufacturer=None):
+def find_router_url_llm(router_series):
     """
     Find a router URL if it does not reveal in the netbox dataset
 
     Parameters:
-        router_name:    The name of the router
         router_series:  The series of this router
-        manufacturer:   The manufacturer of this router, e.g., Cisco
     
     Returns:
         The URL of this router
     """
     client = OpenAI()
-    system_prompt = f"Please return the verified URL datasheet of the {router_name} produced by {manufacturer}. \
-                    Ensure the link is accessible and does not return a '404 - Page Not Found'. \
-                    For example, cisco-3925-chassis's URL is https://www.cisco.com/c/en/us/products/collateral/switches/catalyst-digital-building-series-switches/datasheet-c78-738206.html"
+    system_prompt = f"Please return the URL datasheet of the {router_series}. \
+                    For Cisco routers, the URL datasheet normally contains the keyword cisco. \
+                    For example, Cisco ME 3600X Series Ethernet Access Switches's URL is https://andovercg.com/datasheets/cisco-me-3600x-series-ethernet-access-switches-data_sheet.pdf"
 
     completion = client.beta.chat.completions.parse(
         temperature = 0,
-        model = "gpt-4o-2024-08-06",
+        model = "gpt-4o",
         messages=[
             {
                 "role": "system",
@@ -208,33 +207,40 @@ def extract_datasheet_without_url_llm(router_name):
         pass
 
 
-def process_router_date_llm(router_name, router_series):
+def process_router_date_llm(router_series, url = None):
     """
     Use the OpenAI API to help us extract the date information
     
     Parameters:
-        router_name:    The router name
         router_series:  The router series
     
     Returns:
         The three key dates (release date, end-of-sale date and end-of-support date) of this router
     """
 
-    prompt_file = "../llm_prompt/process_router_date_prompt.txt"
-    components = load_prompt_components(prompt_file, router_name)
+    print("router series url: ", url)
+    if url:
+        system_prompt = f"Please extract the dates from the this given url: {url}."
+        html_content = requests.get(url).text
+        content = md(html_content)
+    
+    else:
+        prompt_file = "../llm_prompt/process_router_date_prompt.txt"
+        components = load_prompt_components(prompt_file, router_series)
 
-    system_prompt = "\n".join([
-        components["PERSONA"],
-        components["HIGH_LEVEL_TASK"],
-        components["LOW_LEVEL_TASK"]
-    ])
+        system_prompt = "\n".join([
+            components["PERSONA"],
+            components["HIGH_LEVEL_TASK"],
+            components["LOW_LEVEL_TASK"]
+        ])
+        content = "Let's find the date!"
 
     client = OpenAI()
 
     try:
         completion = client.beta.chat.completions.parse(
             temperature = 0,
-            model = "gpt-4o-2024-08-06",
+            model = "gpt-4o",
             messages=[
                 {
                     "role": "system",
@@ -242,13 +248,14 @@ def process_router_date_llm(router_name, router_series):
                 },
                 {
                     "role": "user",
-                    "content": "Let's find the date mentioned based on the prompt."
+                    "content": content
                 }
             ],
             response_format=RouterDate,
         )
 
         output = completion.choices[0].message.parsed
+        print("output: ", output)
         parsed_router_date_llm = output.model_dump(mode="yaml")
 
         return parsed_router_date_llm
@@ -258,7 +265,7 @@ def process_router_date_llm(router_name, router_series):
         pass
 
 
-def process_router_type_llm(router_name):
+def process_router_type_llm(router_series):
     """
     Use the OpenAI API to help us extract the type information
     
@@ -270,7 +277,7 @@ def process_router_type_llm(router_name):
     """
     
     prompt_file = "../llm_prompt/process_router_type_prompt.txt"
-    components = load_prompt_components(prompt_file, router_name)
+    components = load_prompt_components(prompt_file, router_series)
     
     # Define the system_prompt
     system_prompt = "\n".join([

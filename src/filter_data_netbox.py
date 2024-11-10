@@ -23,25 +23,34 @@ def extract_supported_products_series(url):
     html_content = requests.get(url).text
     soup = BeautifulSoup(html_content, 'html.parser')
     all_supported_products = soup.find('div', {'id': 'allSupportedProducts'})
-    routers_data = {}
+    products_data = {}
 
-    # Find all router number sections (0-9 and specific models under it)
+    # Extract series information from the 0-9 section
     for item in all_supported_products.find_all('li'):
         number_tag = item.find('span', class_='number')
         if number_tag:
             number = number_tag.text.strip()
-            router_dict = {}
-            
-            # Find all the associated router names and links
+            series_dict = {}
+
+            # Find all the associated series names and links in the 0-9 section
             for data_item in item.find_all('span', class_='data-items'):
-                router_name = data_item.text.strip()
+                series_name = data_item.text.strip()
                 link_tag = data_item.find('a', class_='link-url')
-                if link_tag and router_name:
-                    router_dict[router_name] = link_tag['href']
+                if link_tag and series_name:
+                    series_dict[series_name] = "https://www.cisco.com" + link_tag['href']
+            products_data[number] = series_dict
 
-            routers_data[number] = router_dict
+    # Extract series information from the A-Z section
+    az_section = all_supported_products.find('ul', {'id': 'prodByAlpha'})
+    if az_section:
+        for az_item in az_section.find_all('li'):
+            link_tag = az_item.find('a')
+            if link_tag:
+                series_name = link_tag.text.strip()
+                series_link = link_tag['href']
+                products_data[series_name] = "https://www.cisco.com" + series_link
 
-    return routers_data
+    return products_data
 
 
 class RouterSeries(BaseModel):
@@ -181,7 +190,7 @@ if __name__ == "__main__":
     merged_data = merge_dicts(merged_data, cisco_routers_data)
     merged_data = merge_dicts(merged_data, cisco_switches_data)
     merged_data = merge_dicts(merged_data, cisco_wireless_data)
-    cisco_router_series_file_path = "../category_and_clarification/router_switch_series.json"
+    cisco_router_series_file_path = "../category_and_clarification/router_series.json"
     save_json(merged_data, cisco_router_series_file_path)
 
     psu_category = "../category_and_clarification/psu_category.json" # This file is manually created
