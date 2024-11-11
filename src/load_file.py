@@ -3,6 +3,7 @@ import csv
 import json
 import requests
 import pdfplumber
+import os
 import pandas as pd
 
 
@@ -69,7 +70,6 @@ def load_json(file_path):
         data = json.load(json_file)
 
     return data
-
 
 def save_json(data, file_path):
     with open(file_path, 'w') as json_file:

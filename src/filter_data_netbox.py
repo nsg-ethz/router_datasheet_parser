@@ -145,6 +145,8 @@ def filter_netbox_info(psu_category, content, routers_without_url):
     url_match = url_pattern.search(str(url))
     if url_match:
         url = url_match.group()
+        if url.endswith("htmlhtml"):
+            url = url[:-4]
         output_dict["datasheet_url"] = url
     else:
         output_dict["datasheet_url"] = None

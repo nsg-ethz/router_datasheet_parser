@@ -132,10 +132,11 @@ def find_router_url_llm(router_series):
         The URL of this router
     """
     client = OpenAI()
-    system_prompt = f"Please return the URL datasheet of the {router_series}. \
-                    For Cisco routers, the URL datasheet normally contains the keyword cisco. \
-                    For example, Cisco ME 3600X Series Ethernet Access Switches's URL is https://andovercg.com/datasheets/cisco-me-3600x-series-ethernet-access-switches-data_sheet.pdf"
-
+    system_prompt = f"Find the URL datasheet of the {router_series}. \
+                    The URL datasheet can be a html or a pdf. \
+                    For example, Cisco ME 3600X Series Ethernet Access Switches's URL datasheet is https://andovercg.com/datasheets/cisco-me-3600x-series-ethernet-access-switches-data_sheet.pdf \
+                    For example, Cisco MS350 Series' URL datasheet is https://documentation.meraki.com/MS/MS_Overview_and_Specifications/MS350_Overview_and_Specifications."
+    
     completion = client.beta.chat.completions.parse(
         temperature = 0,
         model = "gpt-4o",
@@ -182,7 +183,7 @@ def extract_datasheet_without_url_llm(router_name):
     try:
         completion = client.beta.chat.completions.parse(
             temperature = 0,
-            model = "gpt-4o-2024-08-06",
+            model = "gpt-4o",
             messages=[
                 {
                     "role": "system",
@@ -292,7 +293,7 @@ def process_router_type_llm(router_series):
         completion = client.beta.chat.completions.parse(
             temperature = 0,
             # model = "gpt-4o-mini",
-            model = "gpt-4o-2024-08-06",
+            model = "gpt-4o",
             messages=[
                 {
                     "role": "system",
