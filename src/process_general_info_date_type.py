@@ -1,63 +1,27 @@
 import os
 import requests
-import pandas as pd
 from googlesearch import search
 from bs4 import BeautifulSoup
-from tqdm import tqdm
+from datetime import datetime
 from load_file import *
 from extract_data_llm import *
 from merge_router_info import *
+from grasp_router_series import *
+from process_general_info_date_type import *
 
 
-def is_model_without_url(router_name, routers_without_url_csv):
-    """
-    Judge if this router contains a URL
+def find_router_series_url(series_path):
 
-    Parameters:
-        router_name:                The router model name
-        routers_without_url_csv:    The csv file containing the info of routers without URL
-    
-    Returns:
-        A boolean value, true if this router does not contain URL, false otherwise
-    """
-    df = pd.read_csv(routers_without_url_csv)
-    return router_name in df["model"].values
+    existing_router_urls = []
 
+    for router_name in os.listdir(series_path):
 
-def is_deprecated_404(url):
-    """
-    Detect if a given URL is actually a deprecated 404 page.
-    
-    Parameters:
-        url (str): The URL to check.
-        
-    Returns:
-        bool: True if the URL is a 404 or deprecated page, False otherwise.
-    """
-    try:
-        response = requests.get(url)
-        
-        # Check if response code is 404
-        if response.status_code == 404:
-            return True
+        filtered_netbox_file = os.path.join(series_path, router_name, "filtered_netbox.yaml")
+        filtered_netbox_file_content = load_yaml(filtered_netbox_file)
+        if filtered_netbox_file_content["datasheet_url"]:
+            existing_router_urls.append(filtered_netbox_file_content["datasheet_url"])
 
-        # Parse HTML content
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # Check for '404' in the title or meta tags
-        title = soup.title.string if soup.title else ""
-        meta_404 = soup.find("meta", {"name": "robots", "content": "noindex"})
-
-        if "404" in title.lower() or meta_404:
-            return True
-        
-    except requests.RequestException as e:
-        # If there's an error with the request itself, treat as 404 (depends on your needs)
-        print(f"Error accessing URL {url}: {e}")
-        return True
-
-    return False
-
+    return list(set(existing_router_urls))
 
 
 def verify_and_adjust_url(url):
@@ -100,9 +64,11 @@ def search_router_url_google(router_name, router_series):
     return possible_urls
 
 
-def extract_router_general_info(filtered_netbox_file_content, filtered_netbox_file, flag=True):
+def extract_router_general_info(filtered_netbox_file_content):
     """
     Extract the general info of a given router
+    Attention, the code is changed to only deal with Category 1
+    For Category 2 and 3, please refer to GitLab history
 
     Parameters:
         filtered_netbox_file_content: The filtered netbox router info
@@ -110,52 +76,18 @@ def extract_router_general_info(filtered_netbox_file_content, filtered_netbox_fi
     Returns:
         The extracted information.
     """
-    routers_without_url_file_path = "../result/routers_without_url.csv"
     router_name = filtered_netbox_file_content["model"]
-    router_series = filtered_netbox_file_content["series"]
 
     # This router contains the URL
-    if not is_model_without_url(router_name, routers_without_url_file_path):
-        url = filtered_netbox_file_content["datasheet_url"]
-        print("Category 1 -> There is a URL in the netbox yaml -> ", url)
-        parsed_router_info_llm = extract_datasheet_with_url_llm(router_name, url)
-        flag = True
-    # This router DOES NOT contain the URL based on the NetBox
-    else:
-        url = find_router_url_llm(router_series)
-        # If the URL can be found and its content is not deprecated
-        if url and not is_deprecated_404(url):
-            url = verify_and_adjust_url(url)
-            print("Category 2 -> The URL is found via LLM ->", url)
-            data = {"datasheet_url": url}
-            filtered_netbox_file_content.update(data)
-            save_yaml(filtered_netbox_file_content, filtered_netbox_file)
-            parsed_router_info_llm = extract_datasheet_with_url_llm(router_name, url)
-            if url.lower().endswith(".pdf"):
-                parsed_router_info_llm["datasheet_pdf"] = url
-            flag = True
-        # The URL is still missing or the found URL is deprecated
-        else:
-            print("Category 3 -> No URL can be found")
-            # For this part, I think there are two alternatives:
-            # 1.    googlesearch-python -> a Python package helping us to search something via Google in python 
-            #       -> It will return us the URL
-            #       -> Record them in a json
-            #       -> Later on, I also found that for the same series, some contain the url while some don't.
-            #       -> We can compare our results with those, and then it will increase our confidence to get the correct URL.
-            #       -> Manually choose the URL and input it to extract_datasheet_with_url_llm
-            # 2.    currently skip this part in order to catch up with the deadline
-            # parsed_router_info_llm = extract_datasheet_without_url_llm(router_name)
-            parsed_router_info_llm = search_router_url_google(router_name, router_series)
-            flag = False
+    url = filtered_netbox_file_content["datasheet_url"]
+    parsed_router_info_llm = extract_datasheet_with_url_llm(router_name, url)
 
-    return parsed_router_info_llm, flag
+    return parsed_router_info_llm
 
 
-def find_date_url_by_series(router_series):
+def find_date_url_by_series(manufacturer, router_series):
 
-    print("router_series: ", router_series)
-    router_series_json_file_path = "../category_and_clarification/router_series.json"
+    router_series_json_file_path = "../result/" + manufacturer.lower() + "/router_series.json"
     router_series_json_file_content = load_json(router_series_json_file_path)
 
     for key, val in router_series_json_file_content.items():
@@ -170,85 +102,124 @@ def find_date_url_by_series(router_series):
     return None
 
 
-def extract_router_date_info(router_series):
+def process_router_date_cisco_support(router_date_series_url):
 
-    router_date_series_url = find_date_url_by_series(router_series)
-    parsed_router_date_llm = process_router_date_llm(router_series, router_date_series_url)
+    try:
+        response = requests.get(router_date_series_url)
+        response.raise_for_status()
         
-    return parsed_router_date_llm
+        soup = BeautifulSoup(response.content, 'html.parser')
+        
+        # Initialize date fields with alternative labels
+        date_labels = {
+            "Series Release Date": ["Series Release Date", "Release Date"],
+            "End-of-Sale Date": ["End-of-Sale Date"],
+            "End-of-Support Date": ["End-of-Support Date"]
+        }
+
+        extracted_dates = {}
+
+        # Find the table that might contain the dates
+        table = soup.find("table", class_="birth-cert-table")
+        
+        if table:
+            rows = table.find_all("tr")
+            for row in rows:
+                label_cell = row.find("th")
+                date_cell = row.find("td")
+                
+                if label_cell and date_cell:
+                    label = label_cell.get_text(strip=True)
+                    date_text = date_cell.get_text(strip=True)
+
+                    # Check each date label key for matching alternative labels
+                    for main_label, alternatives in date_labels.items():
+                        if label in alternatives:
+                            try:
+                                # Parse date to ISO 8601 format
+                                parsed_date = datetime.strptime(date_text, '%d-%b-%Y').date().isoformat()
+                                extracted_dates[main_label] = parsed_date
+                            except ValueError:
+                                print(f"Could not parse date for {label}. Original text: {date_text}")
+        
+        return extracted_dates
+
+    except requests.RequestException as e:
+        print(f"Error accessing URL {router_date_series_url}: {e}")
+        return None
+
+
+def extract_router_date_info(manufacturer, router_series):
+
+    router_date_series_url = find_date_url_by_series(manufacturer, router_series)
+    if router_date_series_url and manufacturer.lower() == "cisco":
+        print("router_date_series_url: ", router_date_series_url)
+        parsed_router_date = process_router_date_cisco_support(router_date_series_url)
+        return parsed_router_date
+    else:
+        print("I shouldn't see you at present")
+        # parsed_router_date_llm = process_router_date_llm(router_series, router_date_series_url)
+        return None
 
 
 if __name__ == "__main__":
 
-    # Currently, the code is only for Cisco
-    result_dir = "../result/cisco/"
-    counter = 0 # This is only used for testing the info accuracies
+    dataset_dir = "../dataset/"
+    result_dir = "../result"
 
-    # Make sure that possible_router_urls_json_file_path is always brand new when the code begins to run
-    possible_router_urls_json_file_path = "../category_and_clarification/possible_router_urls.json"
-    if os.path.exists(possible_router_urls_json_file_path):
-        os.remove(possible_router_urls_json_file_path)
-    
-    possible_router_urls = {}
+    for manufacturer in os.listdir(result_dir):
 
-    for series_folder in tqdm(os.listdir(result_dir)):
-
-        # All the following code is conducted for the routers under the same series
-        print("series_folder: ", series_folder)
-        series_path = os.path.join(result_dir, series_folder)
-
-        if series_folder in [\
-            "me_3600x_series_ethernet_access_switches", 
-            "cisco_business_350_series_managed_switches", \
-            "nexus_2000_series_fabric_extenders", \
-            "aironet_2700_series_access_points", \
-            "cisco_350_series_managed_switches", \
-            "aironet_1240_series", \
-            "cisco_300_series_managed_switches", \
-            "catalyst_2960_plus_series_switches", \
-            "500_series_wpan_industrial_routers", \
-            "cisco_2500_series_access_servers", \
-            "cisco_asa_5500_x_series_firewalls", \
-            "catalyst_3650_series_switches", \
-            "asa_5500_x_series_next_generation_firewalls", \
-            "small_business_rv_series_routers"
-        ]:
+        count = 0
+        # Currently only focusing on Cisco
+        if (manufacturer == "arista") or (manufacturer == "juniper"):
             continue
+
+        manufacturer_dir = os.path.join(result_dir, manufacturer)
+
+        for series_dir in os.listdir(manufacturer_dir):
+
+            series_folder = os.path.join(manufacturer_dir, series_dir)
+            print("====================================================================================")
+            print("series_dir: ", series_dir)
+
+            # Dive into the router directory and ignore 'router_series.json' and 'valid_rotuer_urls.csv'
+            for root, dirs, files in os.walk(series_folder):
+
+                for router_dir in dirs:
+
+                    filtered_netbox_file = os.path.join(series_folder, router_dir, "filtered_netbox.yaml")
+                    filtered_netbox_file_content = load_yaml(filtered_netbox_file)
+                    print("router_dir: ", router_dir)
+                    print("count: ", count)
+                    count += 1
+
+                    # Extract the general information based on the URL datasheet
+                    parsed_router_info_llm = extract_router_general_info(filtered_netbox_file_content)
+                    print("parsed_router_info_llm: ", parsed_router_info_llm)
+                    router_general_llm_file = os.path.join(series_folder, router_dir, "general_llm.yaml")
+                    save_yaml(parsed_router_info_llm, router_general_llm_file)
                 
-        for router_name in os.listdir(series_path):
+                    # Extract the date: 'release date', 'end-of-sale date' and 'end-of-support date'
+                    # For Cisco, LLM is not needed. Beautiful Soup can be used to reduce the cost
+                    router_date = {
+                        "release_date": None,
+                        "end_of_sale": None,
+                        "end_of_support": None
+                    }
+                    router_series = filtered_netbox_file_content["series"]
+                    if router_series.lower().startswith(manufacturer.lower()):
+                        router_series = router_series[len(manufacturer):].strip()
+                    router_date_file = os.path.join(series_folder, router_dir, "date_llm.yaml")
+                    parsed_router_date = extract_router_date_info(manufacturer, router_series)
+                    if parsed_router_date:
+                        router_date["release_date"] = parsed_router_date.get("Series Release Date")
+                        router_date["end_of_sale"] = parsed_router_date.get("End-of-Sale Date")
+                        router_date["end_of_support"] = parsed_router_date.get("End-of-Support Date")
+                    print("router_date: ", router_date)
+                    save_yaml(router_date, router_date_file)
 
-            print("===================================================================================================================")
-            print("router_name: ", router_name, "\n")
-
-            filtered_netbox_file = series_path + "/" + router_name + "/filtered_netbox.yaml"
-            filtered_netbox_file_content = load_yaml(filtered_netbox_file)
-
-            # Extract the general information based on the URL datasheet
-            parsed_router_info_llm, flag = extract_router_general_info(filtered_netbox_file_content, filtered_netbox_file)
-            print("parsed_router_info_llm: ", parsed_router_info_llm)
-            if flag:
-                router_general_llm_file = series_path + "/" + router_name + "/general_llm.yaml"
-                save_yaml(parsed_router_info_llm, router_general_llm_file)
-            else:
-                print("parsed_router_info_llm: ", parsed_router_info_llm)
-                possible_router_urls = merge_dicts(possible_router_urls, parsed_router_info_llm)
-            
-            # Extract the date: 'release date', 'end-of-sale date' and 'end-of-support date'
-            router_series = filtered_netbox_file_content["series"]
-            router_date_llm_file = series_path + "/" + router_name + "/date_llm.yaml"
-            parsed_router_date_llm = extract_router_date_info(router_series)
-            print("parsed_router_date_llm: ", parsed_router_date_llm)
-            save_yaml(parsed_router_date_llm, router_date_llm_file)
-
-            # Write the router type into the yaml
-            router_type_llm_file = series_path + "/" + router_name + "/type_llm.yaml"
-            parsed_router_type_llm = process_router_type_llm(router_name)
-            print("parsed_router_type_llm: ", parsed_router_type_llm)
-            save_yaml(parsed_router_type_llm, router_type_llm_file)
-
-        counter += 1
-        
-        if counter == 20:
-            break
-
-    save_json(possible_router_urls, possible_router_urls_json_file_path)
+                    # Write the router type into the yaml
+                    router_type_llm_file = os.path.join(series_folder, router_dir, "type_llm.yaml")
+                    parsed_router_type_llm = process_router_type_llm(filtered_netbox_file_content["model"])
+                    print("parsed_router_type_llm: ", parsed_router_type_llm)
+                    save_yaml(parsed_router_type_llm, router_type_llm_file)
