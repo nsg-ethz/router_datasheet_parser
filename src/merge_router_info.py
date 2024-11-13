@@ -1,4 +1,4 @@
-from tqdm import tqdm
+import os
 from collections import OrderedDict
 from load_file import *
 
@@ -80,76 +80,46 @@ def all_files_exist(files):
 
 if __name__ == "__main__":
 
-    result_dir = "../result/cisco/"
-    routers_without_url = "../result/routers_without_url.csv"
-    router_series = [\
-            "me_3600x_series_ethernet_access_switches", 
-            "cisco_business_350_series_managed_switches", \
-            "nexus_2000_series_fabric_extenders", \
-            "aironet_2700_series_access_points", \
-            "cisco_350_series_managed_switches", \
-            "aironet_1240_series", \
-            "cisco_300_series_managed_switches", \
-            "catalyst_2960_plus_series_switches", \
-            "500_series_wpan_industrial_routers", \
-            "cisco_2500_series_access_servers", \
-            "cisco_asa_5500_x_series_firewalls", \
-            "catalyst_3650_series_switches", \
-            "asa_5500_x_series_next_generation_firewalls", \
-            "small_business_rv_series_routers"
-        ]
+    result_dir = "../result/"
 
-    for series_folder in tqdm(router_series):
+    for manufacturer in os.listdir(result_dir):
 
-        series_path = os.path.join(result_dir, series_folder)
+        if (manufacturer == "arista") or (manufacturer == "juniper"):
+            continue
+        
+        manufacturer_dir = os.path.join(result_dir, manufacturer)
+        throughput_count = 0
 
-        for router_name in os.listdir(series_path):
+        for series_dir in os.listdir(manufacturer_dir):
 
-            filtered_netbox_file = series_path + "/" + router_name + "/filtered_netbox.yaml"
-            general_llm_file = series_path + "/" + router_name + "/general_llm.yaml"
-            date_file = series_path + "/" + router_name + "/date_llm.yaml"
-            type_file = series_path + "/" + router_name + "/type_llm.yaml"
+            series_folder = os.path.join(manufacturer_dir, series_dir)
 
-            # List of required files
-            required_files = [filtered_netbox_file, general_llm_file, date_file, type_file]
+            for root, dirs, files in os.walk(series_folder):
 
-            # Skip loop if any of the required files is missing
-            if not all_files_exist(required_files):
-                print(f"Skipping {router_name} due to missing files.")
-                continue
+                for router_dir in dirs:
 
-            # Load each file
-            filtered_netbox_data = load_yaml(filtered_netbox_file)
-            url_llm_data = load_yaml(general_llm_file)
-            date_data = load_yaml(date_file)
-            type_data = load_yaml(type_file)
+                    general_data = load_yaml(os.path.join(series_folder, router_dir, "general_llm.yaml"))
+                    date_data = load_yaml(os.path.join(series_folder, router_dir, "date_llm.yaml"))
 
-            # Begin to merge the data
-            merged_data = {
-                "manufacturer": None,
-                "series": None,
-                "model": None,
-                "slug": None,
-                "part_number": None,
-                "u_height": None,
-                "router_type": None,
-                "datasheet_url": None,
-                "datasheet_pdf": None,
-                "release_date": None,
-                "end_of_sale": None,
-                "end_of_support": None,
-                "max_throughput": None,
-                "max_power_draw": None,
-                "typical_power_draw": None,
-                "is_poe_capable": None,
-                "max_poe_draw": None,
-                "psu": None,
-            }
-            merge_dicts(merged_data, filtered_netbox_data)
-            merge_dicts(merged_data, url_llm_data)
-            merge_dicts(merged_data, date_data)
-            merge_dicts(merged_data, type_data)
-            
-            organzed_data = organize_dicts(merged_data)
-            output_file = os.path.join(series_path, router_name, "merged.yaml")
-            save_yaml(organzed_data, output_file)
+                    # Check if max_throughput exists
+                    if (general_data.get("max_throughput") and general_data["max_throughput"].get("value") and date_data.get("release_date")) or \
+                        (general_data.get("max_power_draw") and general_data.get("max_power_draw").get("value") and date_data.get("release_date")):
+                            
+                            print("router_dir: ", router_dir)
+                            filtered_netbox_data = load_yaml(os.path.join(series_folder, router_dir, "filtered_netbox.yaml"))
+                            type_data = load_yaml(os.path.join(series_folder, router_dir, "type_llm.yaml"))
+
+                            merged_data = {"manufacturer": None, "series": None, "model": None, "slug": None, "part_number": None, "u_height": None,
+                                           "router_type": None, "datasheet_url": None, "datasheet_pdf": None, 
+                                           "release_date": None, "end_of_sale": None, "end_of_support": None,
+                                           "max_throughput": None, "max_power_draw": None, "typical_power_draw": None, 
+                                           "is_poe_capable": None, "max_poe_draw": None, "psu": None}
+                            
+                            merge_dicts(merged_data, filtered_netbox_data)
+                            merge_dicts(merged_data, general_data)
+                            merge_dicts(merged_data, date_data)
+                            merge_dicts(merged_data, type_data)
+
+                            organzed_data = organize_dicts(merged_data)
+                            output_file = os.path.join(series_folder, router_dir, "merged.yaml")
+                            save_yaml(organzed_data, output_file)
