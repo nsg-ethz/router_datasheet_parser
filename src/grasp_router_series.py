@@ -4,6 +4,7 @@ from tqdm import tqdm
 from bs4 import BeautifulSoup
 from load_file import *
 from merge_router_info import *
+from extract_data_llm import *
 
 
 def grasp_supported_products_series(manufacturer, url):
@@ -85,3 +86,22 @@ if __name__ == "__main__":
             cisco_router_series_file_path = os.path.join(result_manufacturer_dir, "router_series.json")
             save_json(merged_data, cisco_router_series_file_path)
             print(f"The {manufacturer} series json file has been stored to {cisco_router_series_file_path}")
+
+            # Create the series yaml for Cisco routers
+            dataset_manufacturer_path = os.path.join(dataset_dir, "Cisco")
+            for router in tqdm(os.listdir(dataset_manufacturer_path)):
+
+                content = load_yaml(os.path.join(dataset_manufacturer_path, router))
+                router_name = content["model"]
+
+                # Find the router series and create the associated path
+                router_series = find_router_series(cisco_router_series_file_path, router_name, manufacturer)
+                print("router_series: ", router_series)
+                router_series_str = str(router_series).lower().replace("-", "_").replace(" ", "_").strip()
+                result_series_dir = os.path.join(result_manufacturer_dir, router_series_str)
+                os.makedirs(result_series_dir, exist_ok=True)
+
+                # Create the router path and store the series result into series.yaml
+                result_router_dir = os.path.join(result_series_dir, str(router_name).lower().replace("-", "_").replace(" ", "_").strip())
+                os.makedirs(result_router_dir, exist_ok=True)
+                save_yaml({"series": router_series}, os.path.join(result_router_dir, "series.yaml"))
