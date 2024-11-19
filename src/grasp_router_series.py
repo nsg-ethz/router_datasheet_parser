@@ -1,5 +1,6 @@
 import os
 import requests
+from tqdm import tqdm
 from bs4 import BeautifulSoup
 from load_file import *
 from merge_router_info import *
@@ -10,7 +11,8 @@ def grasp_supported_products_series(manufacturer, url):
     Extract the Cisco routers series information.
 
     Parameters:
-        url:    The URL of the Cisco routers series.
+        manufacturer:   The vendor of the router, e.g., Cisco.
+        url:            The URL of the Cisco routers series.
     
     Returns:
         A dict data-type variable with the key of series name, and the value of series webpage.
@@ -18,7 +20,7 @@ def grasp_supported_products_series(manufacturer, url):
 
     products_data = {}
 
-    if manufacturer.lower() == "cisco":
+    if manufacturer == "cisco":
         
         html_content = requests.get(url).text
         soup = BeautifulSoup(html_content, 'html.parser')
@@ -48,7 +50,7 @@ def grasp_supported_products_series(manufacturer, url):
                     series_name = link_tag.text.strip()
                     series_link = link_tag['href']
                     products_data[series_name] = "https://www.cisco.com" + series_link
-
+    
     return products_data
 
 
@@ -82,5 +84,4 @@ if __name__ == "__main__":
             os.makedirs(result_manufacturer_dir, exist_ok=True)
             cisco_router_series_file_path = os.path.join(result_manufacturer_dir, "router_series.json")
             save_json(merged_data, cisco_router_series_file_path)
-    
-            break
+            print(f"The {manufacturer} series json file has been stored to {cisco_router_series_file_path}")
