@@ -1,156 +1,259 @@
 import os
-from tqdm import tqdm
 import plotly.express as px
-from datetime import datetime
+import pandas as pd
 from load_file import *
 
 
-def plot_release_date_max_throughput(release_date_max_throughput):
+def plot_release_date_max_throughput(manufacturer, df):
+    """
+    Plot the scatter figure to show the relationship between release_date and max_throughput.
+
+    Parameters:
+        manufacturer:   The manufacturer of a router.
+        df:             The df containing the routers max_throughput and release_date.
     
-    dates = []
-    throughputs = []
-    router_names = []
+    Returns:
+        The html and png files of the figure.
+    """
+    df['release_date'] = pd.to_datetime(df['release_date'])
+    df_filtered = df.dropna(subset=['max_throughput', 'release_date'])
 
-    for router_name, (release_date, max_throughput) in release_date_max_throughput.items():
-        
-        date = datetime.strptime(release_date, '%Y-%m-%d')
-        throughput_value = max_throughput['value']
-        unit = max_throughput['unit']
-        
-        # Convert units to Gbps if necessary
-        if unit == 'Mbps':
-            throughput_value /= 1000
-        elif unit == 'Kbps':
-            throughput_value /= 1_000_000
-        
-        dates.append(date)
-        throughputs.append(throughput_value)
-        router_names.append(router_name)
+    print("max throughput and the release date: ", df_filtered.shape[0])
 
-    # Plotting
     fig = px.scatter(
-        x=dates, 
-        y=throughputs, 
-        text=router_names, 
-        labels={'x': 'Release Date', 'y': 'Max Throughput (Gbps)'},
-        title='Router Max Throughput over Release Dates'
+        df_filtered,
+        x='release_date',
+        y='max_throughput',
+        # color='router_type',
+        title='Max Throughput Over Release Dates by Router Series',
+        labels={'release_date': 'Release Date', 'max_throughput': 'Max Throughput (Gbps)'},
+        hover_name='router_name',
+        # category_orders={'router_type': ['access', 'aggregation', 'other']}
     )
-    fig.update_traces(marker=dict(size=10), textposition='top center')
-    fig.update_layout(xaxis=dict(type='date'), showlegend=False)
-    fig.show()
-    fig.write_html("router_max_throughput_over_time.html")
+
+    os.makedirs("../plot/" + manufacturer, exist_ok=True)
+    fig.write_html(f"../plot/{manufacturer}/max_throughput_by_release_date_{manufacturer}.html")
+    fig.write_image(f"../plot/{manufacturer}/max_throughput_by_release_date_{manufacturer}.png")
 
 
-def plot_release_date_max_power_draw(release_date_max_power_draw):
+def plot_release_date_max_power_draw(manufacturer, df):
+    """
+    Plot the scatter figure to show the relationship between release_date and max_power_draw.
+
+    Parameters:
+        manufacturer:   The manufacturer of a router.
+        df:             The df containing the routers max_power_draw and release_date.
     
-    dates = []
-    max_power_values = []
-    router_names = []
+    Returns:
+        The html and png files of the figure.
+    """
+    df['release_date'] = pd.to_datetime(df['release_date'])
+    df_filtered = df.dropna(subset=['max_power_draw', 'release_date'])
 
-    for router_name, (release_date, max_power_draw_data) in release_date_max_power_draw.items():
-        date = datetime.strptime(release_date, '%Y-%m-%d')
-        max_power_value = max_power_draw_data['value']
-        unit = max_power_draw_data['unit']
-        
-        # Append values to respective lists
-        dates.append(date)
-        max_power_values.append(max_power_value)
-        router_names.append(router_name)
+    print("max power draw and the release date: ", df_filtered.shape[0])
 
-    # Plotting
     fig = px.scatter(
-        x=dates, 
-        y=max_power_values, 
-        text=router_names, 
-        labels={'x': 'Release Date', 'y': 'Max Power Draw (W)'},
-        title='Router Max Power Draw over Release Dates'
+        df_filtered,
+        x='release_date',
+        y='max_power_draw',
+        # color='router_type',
+        title='Max Power Draw Over Release Dates by Router Series',
+        labels={'release_date': 'Release Date', 'max_power_draw': 'Max Power Draw (W)'},
+        hover_name='router_name',
+        # category_orders={'router_type': ['access', 'aggregation', 'other']}
     )
-    fig.update_traces(marker=dict(size=10), textposition='top center')
-    fig.update_layout(xaxis=dict(type='date'), showlegend=False)
-    fig.show()
-    fig.write_html("router_max_power_draw_over_time.html")
+
+    os.makedirs("../plot/" + manufacturer, exist_ok=True)
+    fig.write_html(f"../plot/{manufacturer}/max_power_draw_by_release_date_{manufacturer}.html")
+    fig.write_image(f"../plot/{manufacturer}/max_power_draw_by_release_date_{manufacturer}.png")
 
 
-def plot_release_date_sys_eff(release_date_max_throughput, release_date_max_power_draw):
+def plot_release_date_power_efficiency(manufacturer, df):
+    """
+    Plot the scatter figure to show the relationship between release_date and power_efficiency.
+    The power effiency is defined as max_power_draw/max_throughput
+
+    Parameters:
+        manufacturer:   The manufacturer of a router.
+        df:             The df containing the routers max_power_draw, max_throughput and release_date.
     
-    dates = []
-    throughputs = []
-    max_power_values = []
-    router_names = []
-    sys_eff = []
+    Returns:
+        The html and png files of the figure.
+    """
 
-    for router_name, (release_date, max_throughput) in release_date_max_throughput.items():
-        # Convert the release date
-        date = datetime.strptime(release_date, '%Y-%m-%d')
-        throughput_value = max_throughput['value']
-        throughput_unit = max_throughput['unit']
-        
-        # Convert units to Gbps if necessary
-        if throughput_unit == 'Mbps':
-            throughput_value /= 1000
-        elif throughput_unit == 'Kbps':
-            throughput_value /= 1_000_000
-        
-        # Retrieve corresponding max power draw for the same router
-        if router_name in release_date_max_power_draw:
-            max_power_draw_data = release_date_max_power_draw[router_name][1]  # Extract the max power draw dictionary
-            max_power_value = max_power_draw_data['value']
-            
-            # Calculate system efficiency
-            efficiency = throughput_value / max_power_value
-            sys_eff.append(efficiency)
+    df_filtered = df.dropna(subset=['max_power_draw', 'max_throughput', 'release_date'])
 
-            # Store data for plotting
-            dates.append(date)
-            throughputs.append(throughput_value)
-            max_power_values.append(max_power_value)
-            router_names.append(router_name)
+    df_filtered['power_efficiency'] = df_filtered['max_power_draw'] / df_filtered['max_throughput']
+    
+    # Convert the release date to datetime if it's not already
+    df_filtered['release_date'] = pd.to_datetime(df_filtered['release_date'])
 
-
-    # Plotting
     fig = px.scatter(
-        x=dates, 
-        y=sys_eff, 
-        text=router_names, 
-        labels={'x': 'Release Date', 'y': 'System Efficiency'},
-        title='Router System Efficiency over Release Dates'
+        df_filtered,
+        x='release_date',
+        y='power_efficiency',
+        # color='router_type',
+        title='Power Efficiency (Max Power Draw / Max Throughput) Over Release Dates',
+        labels={'release_date': 'Release Date', 'power_efficiency': 'Power Efficiency (W/Gbps)'},
+        hover_name='router_name',
+        # category_orders={'router_type': ['access', 'aggregation', 'other']}
     )
-    fig.update_traces(marker=dict(size=10), textposition='top center')
-    fig.update_layout(xaxis=dict(type='date'), showlegend=False)
-    fig.show()
-    fig.write_html("router_system_efficiency_over_time.html")
+
+    os.makedirs("../plot/" + manufacturer, exist_ok=True)
+    fig.write_html(f"../plot/{manufacturer}/power_efficiency_by_release_date_{manufacturer}.html")
+    fig.write_image(f"../plot/{manufacturer}/power_efficiency_by_release_date_{manufacturer}.png")
+
+
+def plot_throughput_power_draw(manufacturer, df):
+    """
+    Plot the scatter figure to show the relationship between max_throughput and max_power_draw.
+
+    Parameters:
+        manufacturer:   The manufacturer of a router.
+        df:             The df containing the routers max_power_draw and max_throughput.
+    
+    Returns:
+        The html and png files of the figure.
+    """
+    df_filtered = df.dropna(subset=['max_power_draw', 'max_throughput'])
+
+    print("max throughput and max power draw: ", df_filtered.shape[0])
+
+    fig = px.scatter(
+        df_filtered,
+        x='max_throughput',
+        y='max_power_draw',
+        title='Relationship between Max Throughput and Max Power Draw',
+        labels={'max_throughput': 'Max Throughput', 'max_power_draw': 'Max Power Draw (W)'},
+        # color='router_type',
+        hover_name='router_name',
+        # category_orders={'router_type': ['access', 'aggregation', 'other']}
+    )
+
+    # Save the plot as an image
+    os.makedirs("../plot/" + manufacturer, exist_ok=True)
+    fig.write_html(f"../plot/{manufacturer}/throughput_power_{manufacturer}.html")
+    fig.write_image(f"../plot/{manufacturer}/throughput_power_{manufacturer}.png")
+
+
+def convert_throughput_unit(value, unit):
+
+    if unit.lower() == "mbps":
+        value /= 1000
+    elif unit.lower() == "kbps":
+        value /= 1000000
+    elif unit.lower() == "tbps":
+        value *= 1000
+
+    return value
+
+
+def convert_power_unit(value, unit):
+
+    if unit.lower() == "kw":
+        value *= 1000
+    elif unit.lower() == "btu/hr":
+        value *= 0.293071
+    
+    return value
 
 
 if __name__ == "__main__":
 
-    # Currently, the code is only for Cisco
-    result_dir = "../result/cisco/"
+    result_dir = "../result/"
 
-    release_date_max_throughput = {}
-    release_date_max_power_draw = {}
+    for manufacturer in os.listdir(result_dir):
+        manufacturer_dir = os.path.join(result_dir, manufacturer)
 
-    for series_folder in tqdm(os.listdir(result_dir)):
+        if manufacturer == "cisco":
+        
+            df = pd.DataFrame(columns=["router_name", "max_throughput", "max_power_draw", "release_date"])
 
-        # All the following code is conducted for the routers under the same series
-        series_path = os.path.join(result_dir, series_folder)
-                
-        for router_name in os.listdir(series_path):
-            
-            merge_file = os.path.join(series_path, router_name, "merged.yaml")
+            for series_dir in os.listdir(manufacturer_dir):
 
-            if os.path.exists(merge_file):
-                merge_file_content = load_yaml(merge_file)
-                if merge_file_content.get("release_date") is not None \
-                    and merge_file_content.get("max_throughput") is not None:
-                    release_date_max_throughput[merge_file_content["model"]] = [merge_file_content["release_date"]["value"], merge_file_content["max_throughput"]]
-            
-            if os.path.exists(merge_file):
-                merge_file_content = load_yaml(merge_file)
-                if merge_file_content.get("release_date") is not None \
-                    and merge_file_content.get("max_power_draw") is not None:
-                    release_date_max_power_draw[merge_file_content["model"]] = [merge_file_content["release_date"]["value"], merge_file_content["max_power_draw"]]
-    
-    # plot_release_date_max_throughput(release_date_max_throughput)
-    # print("release_date_max_power_draw: ",release_date_max_power_draw)
-    # plot_release_date_max_power_draw(release_date_max_power_draw)
-    plot_release_date_sys_eff(release_date_max_throughput, release_date_max_power_draw)
+                series_folder = os.path.join(manufacturer_dir, series_dir)
+
+                for root, dirs, files in os.walk(series_folder):
+
+                    for router_dir in dirs:
+                        
+                        if os.path.exists(os.path.join(series_folder, router_dir, "merged.yaml")):
+                            
+                            merged_content = load_yaml(os.path.join(series_folder, router_dir, "merged.yaml"))
+                            router_series = merged_content["series"]
+                            router_name = merged_content["model"]
+                            release_date = merged_content["release_date"]
+                            # router_type = merged_content.get("router_type")
+                            max_throughput = merged_content.get("max_throughput")
+                            max_power_draw = merged_content.get("max_power_draw")
+                            # router_type_value = router_type.get("value") if router_type else None
+                            # if router_type_value not in ["access", "aggregation"]:
+                            #     router_type_value = "other"
+                            max_throughput_value = max_throughput.get("value") if max_throughput else None
+                            max_power_draw_value = max_power_draw.get("value") if max_power_draw else None
+                            
+                            # Unify the throughput unit to Gbps
+                            if (max_throughput_value) and (max_throughput.get("unit").lower() != "gbps"):
+                                max_throughput_value = convert_throughput_unit(max_throughput_value, max_throughput.get("unit"))
+                            
+                            # Unify the power unit to W
+                            if (max_power_draw_value) and (max_power_draw.get("unit").lower() != "w"):
+                                max_power_draw_value = convert_power_unit(max_power_draw_value, max_power_draw.get("unit"))
+                            
+                            new_row = pd.DataFrame({
+                                # "router_type": [router_type_value],
+                                "router_name": [router_name],
+                                "max_throughput": [max_throughput_value],
+                                "max_power_draw": [max_power_draw_value],
+                                "release_date": [release_date]
+                            })
+
+                            df = pd.concat([df, new_row], ignore_index=True)
+
+            plot_throughput_power_draw(manufacturer,df)
+            plot_release_date_max_throughput(manufacturer, df)
+            plot_release_date_max_power_draw(manufacturer, df)
+            plot_release_date_power_efficiency(manufacturer, df)
+
+        # There are no release_date for Arista or Juniper
+        else:
+
+            df = pd.DataFrame(columns=["router_name", "max_throughput", "max_power_draw"])
+
+            for root, dirs, files in os.walk(manufacturer_dir):
+
+                for router_dir in dirs:
+                    
+                    if os.path.exists(os.path.join(manufacturer_dir, router_dir, "merged.yaml")):
+                        
+                        merged_content = load_yaml(os.path.join(manufacturer_dir, router_dir, "merged.yaml"))
+                        router_series = merged_content["series"]
+                        router_name = merged_content["model"]
+                        # release_date = merged_content["release_date"]
+                        # router_type = merged_content.get("router_type")
+                        max_throughput = merged_content.get("max_throughput")
+                        max_power_draw = merged_content.get("max_power_draw")
+                        # router_type_value = router_type.get("value") if router_type else None
+                        # if router_type_value not in ["access", "aggregation"]:
+                        #     router_type_value = "other"
+                        max_throughput_value = max_throughput.get("value") if max_throughput else None
+                        max_power_draw_value = max_power_draw.get("value") if max_power_draw else None
+                        
+                        # Unify the throughput unit to Gbps
+                        if (max_throughput_value) and (max_throughput.get("unit").lower() != "gbps"):
+                            max_throughput_value = convert_throughput_unit(max_throughput_value, max_throughput.get("unit"))
+                        
+                        # Unify the power unit to W
+                        if (max_power_draw_value) and (max_power_draw.get("unit").lower() != "w"):
+                            max_power_draw_value = convert_power_unit(max_power_draw_value, max_power_draw.get("unit"))
+                        
+                        new_row = pd.DataFrame({
+                            # "router_type": [router_type_value],
+                            "router_name": [router_name],
+                            "max_throughput": [max_throughput_value],
+                            "max_power_draw": [max_power_draw_value]
+                        })
+
+                        df = pd.concat([df, new_row], ignore_index=True)
+
+            plot_throughput_power_draw(manufacturer, df)

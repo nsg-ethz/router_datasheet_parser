@@ -45,7 +45,6 @@ def count_netbox_keys(router_dir):
                 else:
                     key_counter[full_key] += 1
 
-    # Iterate through all files in the directory
     for filename in tqdm(files):
         content = load_yaml(os.path.join(router_dir, filename))
         process_nested_dict(content)

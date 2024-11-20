@@ -2,10 +2,12 @@ import os
 import json
 import re
 import requests
+import subprocess
+from tqdm import tqdm
 from bs4 import BeautifulSoup
 from load_file import *
 from merge_router_info import *
-from grasp_router_series import *
+from grasp_cisco_router_series import *
 from extract_data_llm import *
 
 
@@ -54,7 +56,16 @@ def is_deprecated_404(url):
 
 
 def grasp_url_netbox(content):
+    """
+    Grasp the URL from the netbox if it exists
 
+    Parameter:
+        content:    The content of the netbox yaml file
+    
+    Returns:
+        The URL datasheet of a router datasheet if it exists,
+        otherwise return None
+    """
     url = content.get("comments")
     url_pattern = re.compile(r'https?://[^\s\)]+')
     url_match = url_pattern.search(str(url))
@@ -66,50 +77,6 @@ def grasp_url_netbox(content):
         return url
     else:
         return None
-
-
-def extract_supported_products_series(manufacturer, url):
-    """
-    Extract the Cisco routers series information.
-
-    Parameters:
-        url:    The URL of the Cisco routers series.
-    
-    Returns:
-        A dict data-type variable with the key of series name, and the value of series webpage.
-    """
-    if manufacturer.lower() == "Cisco":
-        html_content = requests.get(url).text
-        soup = BeautifulSoup(html_content, 'html.parser')
-        all_supported_products = soup.find('div', {'id': 'allSupportedProducts'})
-        products_data = {}
-
-        # Extract series information from the 0-9 section
-        for item in all_supported_products.find_all('li'):
-            number_tag = item.find('span', class_='number')
-            if number_tag:
-                number = number_tag.text.strip()
-                series_dict = {}
-
-                # Find all the associated series names and links in the 0-9 section
-                for data_item in item.find_all('span', class_='data-items'):
-                    series_name = data_item.text.strip()
-                    link_tag = data_item.find('a', class_='link-url')
-                    if link_tag and series_name:
-                        series_dict[series_name] = "https://www.cisco.com" + link_tag['href']
-                products_data[number] = series_dict
-
-        # Extract series information from the A-Z section
-        az_section = all_supported_products.find('ul', {'id': 'prodByAlpha'})
-        if az_section:
-            for az_item in az_section.find_all('li'):
-                link_tag = az_item.find('a')
-                if link_tag:
-                    series_name = link_tag.text.strip()
-                    series_link = link_tag['href']
-                    products_data[series_name] = "https://www.cisco.com" + series_link
-
-    return products_data
 
 
 def filter_netbox_info(psu_category, content, url):
@@ -150,7 +117,6 @@ def filter_netbox_info(psu_category, content, url):
     output_dict["part_number"] = content.get("part_number", output_dict.get("part_number"))
     output_dict["u_height"] = content.get("u_height", output_dict.get("u_height"))
     output_dict["datasheet_url"] = url
-    # record_without_url_csv(routers_without_url, output_dict["manufacturer"], output_dict["model"])
 
     """
     psu related:
@@ -187,7 +153,6 @@ if __name__ == "__main__":
     | Category 3 | url NOT available in the NetBox AND CANNOT be found online |
     ---------------------------------------------------------------------------
     """
-
     psu_category = "../category_and_clarification/psu_category.json" # This file is manually created
     dataset_dir = "../dataset/"
     result_dir = "../result"
@@ -200,47 +165,49 @@ if __name__ == "__main__":
         manufacturer = manufacturer.lower()
         result_manufacturer_path = os.path.join(result_dir, manufacturer)
         os.makedirs(result_manufacturer_path, exist_ok=True)
+        valid_router_url = {"router":[], "url": []}
 
-        if manufacturer == "cisco":
-
-            cisco_router_series_file_path = os.path.join(result_manufacturer_path, "router_series.json")
-
-            valid_router_url = {"router":[], "url": []}
-
-            for router in tqdm(os.listdir(dataset_manufacturer_path)):
-                
-                content = load_yaml(os.path.join(dataset_manufacturer_path, router))
-
-                router_name = content["model"]
-
-                # load the valid router URL -> At present, we only care about Category 1
-                url = grasp_url_netbox(content)
-                url = None if is_deprecated_404(url) else url
-
-                if url:
-
-                    print("router we care about: ", router_name)
-
-                    valid_router_url["router"].append(router)
-                    valid_router_url["url"].append(url)
-                
-                    router_series = find_router_series(cisco_router_series_file_path, router_name, manufacturer)
-                    print("router_series: ", router_series)
-                    router_series_str = str(router_series).lower().replace("-", "_").replace(" ", "_").strip()
-                    result_series_dir = os.path.join(result_manufacturer_path, router_series_str)
-                    os.makedirs(result_series_dir, exist_ok=True)
-                    
-                    filtered_content = filter_netbox_info(psu_category, content, url)
-                    filtered_content["series"] = str(router_series)
-                    filter_netbox_yaml_file = "filtered_netbox.yaml"
-
-                    # Save the result into the 'result/<router_series>/<router_name>/filtered_netbox.yaml'
-                    result_router_dir = os.path.join(result_series_dir, str(router_name).lower().replace("-", "_").replace(" ", "_").strip())
-                    os.makedirs(result_router_dir, exist_ok=True)
-                    save_yaml(filtered_content, os.path.join(result_router_dir, filter_netbox_yaml_file))
+        for router in tqdm(os.listdir(dataset_manufacturer_path)):
             
-            # After iterating all the Category 1 router, store the valid url into a csv file
-            router_df = pd.DataFrame(valid_router_url)
-            valid_url_csv_file = os.path.join(result_manufacturer_path, "valid_router_urls.csv")
-            router_df.to_csv(valid_url_csv_file, index=False)
-            break
+            content = load_yaml(os.path.join(dataset_manufacturer_path, router))
+
+            router_name = content["model"]
+
+            url = grasp_url_netbox(content)
+            url = None if is_deprecated_404(url) else url
+
+            """
+            The result path may depend as there is one more directory for Cisco series
+            For Cisco, it shall be 'result/cisco/<router_series>/<router_name>/filtered_netbox.yaml'
+            For Arista/Juniper, it shall be 'result/<manufacturer>/<router_name>/filtered_netbox.yaml'
+            """
+            router_name_str = str(router_name).lower().replace("-", "_").replace(" ", "_").strip()
+            filter_netbox_yaml_file = "filtered_netbox.yaml"
+            if manufacturer == "cisco":
+                command = ['find', '../result/', '-type', 'd', '-iname', router_name_str]
+                result_router_dir = subprocess.run(command, check=True, stdout=subprocess.PIPE, text=True).stdout.strip()
+            else:
+                result_router_dir = os.path.join(result_manufacturer_path, router_name_str)
+            os.makedirs(result_router_dir, exist_ok=True)
+
+            # Category 1
+            if url:
+                valid_router_url["router"].append(router)
+                valid_router_url["url"].append(url)
+                filtered_content = filter_netbox_info(psu_category, content, url)
+                save_yaml(filtered_content, os.path.join(result_router_dir, filter_netbox_yaml_file))
+            
+            # Category 2 and 3
+            else:
+                url = find_router_url_llm(router_name)
+                # Category 2
+                if url and not is_deprecated_404(url):
+                    filtered_content = filter_netbox_info(psu_category, content, url)
+                    filtered_content["datasheet_url"] = str(url)
+                    save_yaml(filtered_content, os.path.join(result_router_dir, filter_netbox_yaml_file))
+                # Category 3 is not needed right now
+                
+        # After iterating all the Category 1 router, store the valid url into a csv file
+        router_df = pd.DataFrame(valid_router_url)
+        valid_url_csv_file = os.path.join(result_manufacturer_path, "valid_router_urls.csv")
+        router_df.to_csv(valid_url_csv_file, index=False)

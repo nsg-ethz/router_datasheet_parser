@@ -58,6 +58,10 @@ class RouterURL(BaseModel):
     router_url: Optional[str] = Field(description="The official URL for the router, providing detailed product information and specifications.")
 
 
+class RouterSeries(BaseModel):
+    router_series: Optional[str] = Field(description="The router series which this router model belong to.")
+
+
 def extract_datasheet_with_url_llm(router_name, url):
     """
     Use the OpenAI API to help us extract the information based on provided URL
@@ -82,19 +86,21 @@ def extract_datasheet_with_url_llm(router_name, url):
     client = OpenAI()
     html_content = requests.get(url).text
     # Transfer the HTML to MD to reduce the number of tokens
-    # encoding = tiktoken.encoding_for_model("gpt-4o")
-    os.makedirs("../result/markdown", exist_ok=True)
-    if "pdf" in url:
+    # encoding = tiktoken.encoding_for_model("gpt-4o-mini")
+    os.makedirs("../markdown", exist_ok=True)
+    if url.endswith("pdf"):
         markdown_content = pdf_to_markdown(url, router_name)
     else:
         markdown_content = md(html_content)
-        with open(f"../result/markdown/{router_name}.md", "w") as f:
+        with open(f"../markdown/{router_name}.md", "w") as f:
             f.write(markdown_content)
+
+    if markdown_content == None:
+        return None
 
     # Call the OpenAI API
     try:
         completion = client.beta.chat.completions.parse(
-            # model = "gpt-4o-mini",
             temperature = 0,
             model = "gpt-4o",
             messages=[
@@ -113,7 +119,6 @@ def extract_datasheet_with_url_llm(router_name, url):
         output = completion.choices[0].message.parsed
         parsed_router_url_llm = output.model_dump(mode="yaml")
 
-        # Extract units
         return parsed_router_url_llm
     
     except Exception as e:
@@ -121,18 +126,18 @@ def extract_datasheet_with_url_llm(router_name, url):
         pass
 
 
-def find_router_url_llm(router_series):
+def find_router_url_llm(router_name):
     """
-    Find a router URL if it does not reveal in the netbox dataset
+    Find a router URL if it does not reveal in the netbox dataset.
 
     Parameters:
-        router_series:  The series of this router
+        router_name:  The name of this router.
     
     Returns:
-        The URL of this router
+        The URL of this router.
     """
     client = OpenAI()
-    system_prompt = f"Find the URL datasheet of the {router_series}. \
+    system_prompt = f"Find the URL datasheet of the {router_name}. \
                     The URL datasheet can be a html or a pdf. \
                     For example, Cisco ME 3600X Series Ethernet Access Switches's URL datasheet is https://andovercg.com/datasheets/cisco-me-3600x-series-ethernet-access-switches-data_sheet.pdf \
                     For example, Cisco MS350 Series' URL datasheet is https://documentation.meraki.com/MS/MS_Overview_and_Specifications/MS350_Overview_and_Specifications."
@@ -292,7 +297,6 @@ def process_router_type_llm(router_series):
     try:
         completion = client.beta.chat.completions.parse(
             temperature = 0,
-            # model = "gpt-4o-mini",
             model = "gpt-4o",
             messages=[
                 {
@@ -315,3 +319,47 @@ def process_router_type_llm(router_series):
     except Exception as e:
         print("Error: ", e)
         pass
+
+
+def find_router_series_llm(cisco_router_series_file_path, router_name, manufacturer=None):
+    """
+    Find the corresponding router series with the help of LLM.
+
+    Parameters:
+        cisco_router_series_file_path:   The file path indicating the Cisco router series information.
+        router_name:                     The name of the router.
+        manufacturer:                    The manufacturer of a router, e.g., Cisco.
+
+    Returns:
+        The series of the router.                            
+    """
+    client = OpenAI()
+    system_prompt = f"Given the router model '{router_name}', its associated manufacturer '{manufacturer}' and the '{cisco_router_series_file_path}' file\
+                    please return the router series for this specific model. \
+                    It will be perfect if the router series belongs to one of the those in '{cisco_router_series_file_path}'. \
+                    If you can't find the corresponding series in '{cisco_router_series_file_path}', then use your own knowledge to search for the series. \
+                    If you still can't find it, leave it empty. \
+                    For example, router 'Catalyst 3650-48FQM-L' belongs to the series 'Catalyst 3650 Series Switches'"
+
+    cisco_router_series = load_json(cisco_router_series_file_path)
+    cisco_router_series_str = json.dumps(cisco_router_series)
+
+    completion = client.beta.chat.completions.parse(
+        temperature = 0,
+        model = "gpt-4o",
+        messages=[
+            {
+                "role": "system",
+                "content": system_prompt
+            },
+            {
+                "role": "user",
+                "content": cisco_router_series_str
+            }
+        ],
+        response_format=RouterSeries,
+    )
+
+    output_series = completion.choices[0].message.parsed.router_series
+
+    return output_series
