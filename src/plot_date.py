@@ -31,9 +31,9 @@ def plot_release_date_max_throughput(manufacturer, df):
         # category_orders={'router_type': ['access', 'aggregation', 'other']}
     )
 
-    os.makedirs("../plot/" + manufacturer, exist_ok=True)
-    fig.write_html(f"../plot/{manufacturer}/max_throughput_by_release_date_{manufacturer}.html")
-    fig.write_image(f"../plot/{manufacturer}/max_throughput_by_release_date_{manufacturer}.png")
+    os.makedirs("../fig/" + manufacturer, exist_ok=True)
+    fig.write_html(f"../fig/{manufacturer}/max_throughput_by_release_date_{manufacturer}.html")
+    fig.write_image(f"../fig/{manufacturer}/max_throughput_by_release_date_{manufacturer}.png")
 
 
 def plot_release_date_max_power_draw(manufacturer, df):
@@ -63,9 +63,9 @@ def plot_release_date_max_power_draw(manufacturer, df):
         # category_orders={'router_type': ['access', 'aggregation', 'other']}
     )
 
-    os.makedirs("../plot/" + manufacturer, exist_ok=True)
-    fig.write_html(f"../plot/{manufacturer}/max_power_draw_by_release_date_{manufacturer}.html")
-    fig.write_image(f"../plot/{manufacturer}/max_power_draw_by_release_date_{manufacturer}.png")
+    os.makedirs("../fig/" + manufacturer, exist_ok=True)
+    fig.write_html(f"../fig/{manufacturer}/max_power_draw_by_release_date_{manufacturer}.html")
+    fig.write_image(f"../fig/{manufacturer}/max_power_draw_by_release_date_{manufacturer}.png")
 
 
 def plot_release_date_power_efficiency(manufacturer, df):
@@ -99,9 +99,9 @@ def plot_release_date_power_efficiency(manufacturer, df):
         # category_orders={'router_type': ['access', 'aggregation', 'other']}
     )
 
-    os.makedirs("../plot/" + manufacturer, exist_ok=True)
-    fig.write_html(f"../plot/{manufacturer}/power_efficiency_by_release_date_{manufacturer}.html")
-    fig.write_image(f"../plot/{manufacturer}/power_efficiency_by_release_date_{manufacturer}.png")
+    os.makedirs("../fig/" + manufacturer, exist_ok=True)
+    fig.write_html(f"../fig/{manufacturer}/power_efficiency_by_release_date_{manufacturer}.html")
+    fig.write_image(f"../fig/{manufacturer}/power_efficiency_by_release_date_{manufacturer}.png")
 
 
 def plot_throughput_power_draw(manufacturer, df):
@@ -131,9 +131,9 @@ def plot_throughput_power_draw(manufacturer, df):
     )
 
     # Save the plot as an image
-    os.makedirs("../plot/" + manufacturer, exist_ok=True)
-    fig.write_html(f"../plot/{manufacturer}/throughput_power_{manufacturer}.html")
-    fig.write_image(f"../plot/{manufacturer}/throughput_power_{manufacturer}.png")
+    os.makedirs("../fig/" + manufacturer, exist_ok=True)
+    fig.write_html(f"../fig/{manufacturer}/throughput_power_{manufacturer}.html")
+    fig.write_image(f"../fig/{manufacturer}/throughput_power_{manufacturer}.png")
 
 
 def convert_throughput_unit(value, unit):
