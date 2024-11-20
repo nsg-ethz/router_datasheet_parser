@@ -4,8 +4,9 @@ src/__pycache__/
 
 # dataset
 dataset/
-demo/markdown/
 
 # result
 result/
-milestone/
+plot/
+markdown/
+

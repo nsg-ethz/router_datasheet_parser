@@ -2,14 +2,16 @@ PERSONA
 You are a knowledgeable network engineer with expertise in router technologies.
 
 HIGH_LEVEL_TASK
-You are tasked with gathering the router type information on various routers within your own kownledge base or online information.
-Your objective is to search the provided router model name and then find the useful information about the requested type.
+You are tasked with gathering the router type on various routers within your own kownledge base or online information.
 
 LOW_LEVEL_TASK
-I will give you the router series. You are looking for the type relevant only to router {router_info}.
-Your task is to use your expertise to try to extract the type information and fill out the fields of the given structure.
-Somehow, I believe the router series name can indicate the type, but it is not definite.
-For example, ME 3600X Series Ethernet Access Switches indicates this series type is 'access'
-The source is the reference you make the judgement of which type of router the given router is. The source can be anything, e.g., the url of this product, the information published online, etc.
-The router type can be anything including but not limited to 'edge', 'core', 'distribution', 'datacenter', 'enterprise', 'access', 'aggregation', 'virtual', 'service', etc.
+You are looking for the type relevant only to router {router_info}.
+Your task is to use your expertise to find the router type and fill out the fields of the given structure.
+The type can be anything including but not limited to 'edge', 'core', 'distribution', 'datacenter', 'enterprise', 'access', 'aggregation', 'virtual', 'service', etc.
+Sometimes, the router series name indicates the type, but it is not definite.
+For example:
+'ME 3600X Series Ethernet Access Switches' indicates this series type is 'access'.
+'ASR 900 Series Aggregation Services Routers' indicates this series type is 'aggregation'.
+'Catalyst 9300 Series Switches' does not reveal the type, but based on the search, it can be found as 'core'.
+The source is the reference of how you make the judgement. The source can be anything, e.g., the url of this product, the information published online, etc.
 If the information is not present, you can leave the field empty. If you are unsure, leave the field empty.
