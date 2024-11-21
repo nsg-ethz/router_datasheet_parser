@@ -5,7 +5,7 @@ This repository parses datasets of Arista, Cisco, and Juniper routers sourced fr
 ## Environment and Prerequisites
 - IDE: Visual Studio Code
 - Python: 3.10.12
-- Python packages: [requirements.txt](https://gitlab.ethz.ch/nsg/research/powerdb/db_scrapping/-/blob/main/requirements.txt?ref_type=heads)
+- Python packages: [requirements.txt](https://github.com/nsg-ethz/router_datasheet_parser/blob/main/requirements.txt)
 - Ensure that you have set the OpenAI API key before proceeding: `export OPENAI_API_KEY="your_api_key"`
 
 ## Repo Stucture
@@ -63,25 +63,25 @@ This repository parses datasets of Arista, Cisco, and Juniper routers sourced fr
 
 ## Code Description
 The functions have already been documented inside the python scripts. Therefore, this section will only briefly explain the main role of the three scripts used inside this test.
-- [collect_kv_netbox.py](https://gitlab.ethz.ch/nsg/research/powerdb/db_scrapping/-/blob/main/src/collect_kv_netbox.py): It calculates and returns the count of each feature stored in NetBox. The results are saved in `netbox_keys.yaml` under each manufacturer result directory. For example, part_number: 242 stored in result/arista/netbox_keys.yaml means that the key part_number appears 242 times for arista rotuers in NetBox.
-- [grasp_cisco_router_series.py](https://gitlab.ethz.ch/nsg/research/powerdb/db_scrapping/-/blob/main/src/grasp_cisco_router_series.py): It is specifically designed for Cisco routers and identifies the series of a given router. As a result, the Cisco router results include an additional directory level corresponding to the router series.
-- [filter_data_netbox.py](https://gitlab.ethz.ch/nsg/research/powerdb/db_scrapping/-/blob/main/src/filter_data_netbox.py): It filters out irrelevant features from the NetBox dataset, retaining only the relevant ones in `filtered.yaml` for subsequent use.
-- [process_general_info_date_type.py](https://gitlab.ethz.ch/nsg/research/powerdb/db_scrapping/-/blob/main/src/process_general_info_date_type.py): It extracts essential data from router URL datasheets with the assistance of LLM.
-- [merge_router_info.py](https://gitlab.ethz.ch/nsg/research/powerdb/db_scrapping/-/blob/main/src/merge_router_info.py): It merges all the information from `filtered.yaml`, `general_llm.yaml`, `date_llm.yaml`, and `series.yaml` into a unified `merged.yaml`. Note that different routers may include different YAML files, which will be specifically explained in a later section.
-- [plot_data.py](https://gitlab.ethz.ch/nsg/research/powerdb/db_scrapping/-/blob/main/src/plot_data.py): It generates various relationship graphs based on the processed data.
-- [extract_data_llm.py](https://gitlab.ethz.ch/nsg/research/powerdb/db_scrapping/-/blob/main/src/extract_data_llm.py): It contains all the functions that interact with the OpenAI API.
-- [load_file.py](https://gitlab.ethz.ch/nsg/research/powerdb/db_scrapping/-/blob/main/src/load_file.py): It provides fundamental functions for reading and writing files in various formats, such as PDF, JSON, CSV, and more.
+- [collect_kv_netbox.py](https://github.com/nsg-ethz/router_datasheet_parser/blob/main/src/collect_kv_netbox.py): It calculates and returns the count of each feature stored in NetBox. The results are saved in `netbox_keys.yaml` under each manufacturer result directory. For example, part_number: 242 stored in result/arista/netbox_keys.yaml means that the key part_number appears 242 times for arista rotuers in NetBox.
+- [grasp_cisco_router_series.py](https://github.com/nsg-ethz/router_datasheet_parser/blob/main/src/grasp_cisco_router_series.py): It is specifically designed for Cisco routers and identifies the series of a given router. As a result, the Cisco router results include an additional directory level corresponding to the router series.
+- [filter_data_netbox.py](https://github.com/nsg-ethz/router_datasheet_parser/blob/main/src/filter_data_netbox.py): It filters out irrelevant features from the NetBox dataset, retaining only the relevant ones in `filtered.yaml` for subsequent use.
+- [process_general_info_date_type.py](https://github.com/nsg-ethz/router_datasheet_parser/blob/main/src/process_general_info_date_type.py): It extracts essential data from router URL datasheets with the assistance of LLM.
+- [merge_router_info.py](https://github.com/nsg-ethz/router_datasheet_parser/blob/main/src/merge_router_info.py): It merges all the information from `filtered.yaml`, `general_llm.yaml`, `date_llm.yaml`, and `series.yaml` into a unified `merged.yaml`. Note that different routers may include different YAML files, which will be specifically explained in a later section.
+- [plot_data.py](https://github.com/nsg-ethz/router_datasheet_parser/blob/main/src/plot_data.py): It generates various relationship graphs based on the processed data.
+- [extract_data_llm.py](https://github.com/nsg-ethz/router_datasheet_parser/blob/main/src/extract_data_llm.py): It contains all the functions that interact with the OpenAI API.
+- [load_file.py](https://github.com/nsg-ethz/router_datasheet_parser/blob/main/src/load_file.py): It provides fundamental functions for reading and writing files in various formats, such as PDF, JSON, CSV, and more.
 
 
 ## Output Explanation
-- `netbox_keys.yaml`: This file stores the counts of each feature present in NetBox depending on the manufacturer. It is the output of the script [collect_kv_netbox.py](https://gitlab.ethz.ch/nsg/research/powerdb/db_scrapping/-/blob/main/src/collect_kv_netbox.py) mentioned above.
+- `netbox_keys.yaml`: This file stores the counts of each feature present in NetBox depending on the manufacturer. It is the output of the script [collect_kv_netbox.py](https://github.com/nsg-ethz/router_datasheet_parser/blob/main/src/collect_kv_netbox.py) mentioned above.
 - `psu_category.json`: This manually created file categorizes PSU-related information based on observations from `netbox_keys.yaml`. Since PSU data in NetBox lacks standardization, this file defines keywords that are relevant to PSU inforamtion for better organization and processing.
-- `valid_router_urls.csv`: Some URL datasheets in NetBox are either deprecated or unreachable. This file lists routers with valid URL datasheets filtered from the NetBox dataset. It is the output of the script [filter_data_netbox.py](https://gitlab.ethz.ch/nsg/research/powerdb/db_scrapping/-/blob/main/src/filter_data_netbox.py).
-- `series.yaml`: This file is specific to Cisco routers and contains the series information, which is essential for parsing key dates related to Cisco routers. It is generated as the output of the script [grasp_cisco_router_series.py](https://gitlab.ethz.ch/nsg/research/powerdb/db_scrapping/-/blob/main/src/grasp_cisco_router_series.py)
-- `filtered_netbox`: This file contains filtered information from NetBox, retaining only the relevant data while discarding unnecessary details. It is the output of the script [filter_data_netbox.py](https://gitlab.ethz.ch/nsg/research/powerdb/db_scrapping/-/blob/main/src/filter_data_netbox.py).
-- `general.yaml`: This file contains the information extracted by LLM from the router's URL datasheet. It is generated as the output of the script [process_general_info_date_type.py](https://gitlab.ethz.ch/nsg/research/powerdb/db_scrapping/-/blob/main/src/process_general_info_date_type.py).
-- `date_llm.yaml`: This file is specific to Cisco routers and stores key dates: release_date, end_of_sale date, and end_of_support_date. It is the output of [process_general_info_date_type.py](https://gitlab.ethz.ch/nsg/research/powerdb/db_scrapping/-/blob/main/src/process_general_info_date_type.py).
-- `merged.yaml`: This file consolidates information from multiple sources: `series.yaml`(Cisco), `date_llm.yaml`(Cisco), `filtered_netbox` and `general.yaml`. It is the output of the script [merge_router_info.py](https://gitlab.ethz.ch/nsg/research/powerdb/db_scrapping/-/blob/main/src/merge_router_info.py).
+- `valid_router_urls.csv`: Some URL datasheets in NetBox are either deprecated or unreachable. This file lists routers with valid URL datasheets filtered from the NetBox dataset. It is the output of the script [filter_data_netbox.py](https://github.com/nsg-ethz/router_datasheet_parser/blob/main/src/filter_data_netbox.py).
+- `series.yaml`: This file is specific to Cisco routers and contains the series information, which is essential for parsing key dates related to Cisco routers. It is generated as the output of the script [grasp_cisco_router_series.py](https://github.com/nsg-ethz/router_datasheet_parser/blob/main/src/grasp_cisco_router_series.py)
+- `filtered_netbox`: This file contains filtered information from NetBox, retaining only the relevant data while discarding unnecessary details. It is the output of the script [filter_data_netbox.py](https://github.com/nsg-ethz/router_datasheet_parser/blob/main/src/filter_data_netbox.py).
+- `general.yaml`: This file contains the information extracted by LLM from the router's URL datasheet. It is generated as the output of the script [process_general_info_date_type.py](https://github.com/nsg-ethz/router_datasheet_parser/blob/main/src/process_general_info_date_type.py).
+- `date_llm.yaml`: This file is specific to Cisco routers and stores key dates: release_date, end_of_sale date, and end_of_support_date. It is the output of [process_general_info_date_type.py](https://github.com/nsg-ethz/router_datasheet_parser/blob/main/src/process_general_info_date_type.py).
+- `merged.yaml`: This file consolidates information from multiple sources: `series.yaml`(Cisco), `date_llm.yaml`(Cisco), `filtered_netbox` and `general.yaml`. It is the output of the script [merge_router_info.py](https://github.com/nsg-ethz/router_datasheet_parser/blob/main/src/merge_router_info.py).
 - The final figures can be found under fig folder.
 
 ## Usage Specification
