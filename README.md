@@ -86,31 +86,32 @@ The functions have already been documented inside the python scripts. Therefore,
 
 ## Usage Specification
 The data parsing pipeline is illustrated in the figure below, with the red text highlighting steps assisted by the LLM:
-<p align="center">
+<div style="text-align: center;">
     <img src="data_parsing_pipeline.png" alt="Data Parsing Pipeline" width="85%">
-</p>
+</div>
 
-1. (Optional) Review the counts of each feature present in NetBox to gain insights into the dataset. After completing this step, ensure that `./category_and_clarification/psu_clarication.json` is available, as it is essential for PSU-related processing in subsequent steps.
+1. Ensure that you have downloaded the router data for Arista, Cisco, and Juniper from [NetBox Device Type Library](https://github.com/netbox-community/devicetype-library/tree/master/device-types). Place these datasets in the dataset folder within this repository.
+2. (Optional) Review the counts of each feature present in NetBox to gain insights into the dataset. After completing this step, ensure that `./category_and_clarification/psu_clarication.json` is available, as it is essential for PSU-related processing in subsequent steps.
 ```
 python3 collect_kv_netbox.py
 ```
-2. Identify the router series (specific to Cisco routers) using LLM assistance.
+3. Identify the router series (specific to Cisco routers) using LLM assistance.
 ```
 python3 grasp_cisco_router_series.py
 ```
-3. Filter relevant information from the NetBox YAML file.
+4. Filter relevant information from the NetBox YAML file.
 ```
 python3 filter_data_netbox.py
 ```
-4. Extract general router information from the URL datasheet using LLM. For Cisco routers, it will also extract the date information.
+5. Extract general router information from the URL datasheet using LLM. For Cisco routers, it will also extract the date information.
 ```
 python3 process_general_info_date_type.py
 ```
-5. Merge the all the router information.
+6. Merge the all the router information.
 ```
 python3 merge_router_info.py
 ```
-6. Plot the graph.
+7. Plot the graph.
 ```
 python3 plot_data.py
 ```
