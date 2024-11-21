@@ -10,3 +10,5 @@ result/
 fig/
 markdown/
 
+# local file
+src/clean_cisco_router_series_temp.py
